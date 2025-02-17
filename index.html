@@ -1,28 +1,54 @@
+<!DOCTYPE html>
 <html>
 <head>
-<script src="dist/zmusic.js"></script>
-<script>
-// Make XHR to support Promise.
-function xhr (url) {
-  return new Promise(function (resolve, reject) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', url, true);
-    xhr.responseType = 'arraybuffer';
-    xhr.addEventListener('load', e => {
-      resolve(xhr.response);
-      xhr.abort();
-    }, false);
-    xhr.send();
-  });
-}
-
-Promise.all([
-    ZMUSIC.install(),
-    xhr('data/bgm1.zmd'),
-    xhr('data/bgm.zpd')]).then(results => {
-  ZMUSIC.play(results[1], results[2]);
-});
-</script>
+  <meta charset="UTF-8">
+  <title>ZMUSIC Example</title>
+  <script src="dist/zmusic.js"></script>
 </head>
-<body><button onclick="ZMUSIC.resume()">Unmute</button></body>
+<body>
+  <button id="playButton">Play Music</button>
+  <script>
+    // Helper function to perform an XHR request and fetch binary data.
+    function xhr(url) {
+      return new Promise(function(resolve, reject) {
+        var req = new XMLHttpRequest();
+        req.open('GET', url, true);
+        req.responseType = 'arraybuffer';
+        req.onload = function() {
+          if (req.status >= 200 && req.status < 300) {
+            resolve(req.response);
+          } else {
+            reject(new Error('Failed to load ' + url + ': status ' + req.status));
+          }
+        };
+        req.onerror = function() {
+          reject(new Error('Network error while trying to load ' + url));
+        };
+        req.send();
+      });
+    }
+
+    // Set up event listener for the button so that all audio playback steps occur after a user gesture.
+    document.getElementById('playButton').addEventListener('click', function() {
+      // Resume or create the AudioContext after user interaction.
+      if (ZMUSIC && typeof ZMUSIC.resume === 'function') {
+        ZMUSIC.resume();
+      }
+      
+      // Now load and install the music resources.
+      Promise.all([
+        ZMUSIC.install(),
+        xhr('data/bgm1.zmd'),
+        xhr('data/bgm.zpd')
+      ])
+      .then(results => {
+        // Start playing the track using the loaded data.
+        ZMUSIC.play(results[1], results[2]);
+      })
+      .catch(error => {
+        console.error('Error during loading or playing music:', error);
+      });
+    });
+  </script>
+</body>
 </html>
