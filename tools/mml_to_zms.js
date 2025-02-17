@@ -1,16 +1,17 @@
 const fs = require('fs');
 
-function convertMMLtoZMS(mml) {
+function convertMMLtoZMD(mml) {
     const header = Buffer.from("ZMUSIC2.08", "utf-8"); // 仮のヘッダー
-    const tempo = mml.match(/T(\d+)/) ? parseInt(mml.match(/T(\d+)/)[1], 10) : 120;
+    const tempoMatch = mml.match(/T(\d+)/);
+    const tempo = tempoMatch ? parseInt(tempoMatch[1], 10) : 120;
     const notes = mml.replace(/[^CDEFGABR]/g, ""); // CDEFGAB + R（休符）のみ抽出
 
-    let zmsData = [tempo];
+    let zmdData = [tempo];
     for (const note of notes) {
-        zmsData.push(note.charCodeAt(0));
+        zmdData.push(note.charCodeAt(0));
     }
 
-    return Buffer.concat([header, Buffer.from(zmsData)]);
+    return Buffer.concat([header, Buffer.from(zmdData)]);
 }
 
 function main(inputPath, outputPath) {
@@ -20,14 +21,14 @@ function main(inputPath, outputPath) {
     }
 
     const mml = fs.readFileSync(inputPath, "utf-8");
-    const zmsData = convertMMLtoZMS(mml);
-    fs.writeFileSync(outputPath, zmsData);
+    const zmdData = convertMMLtoZMD(mml);
+    fs.writeFileSync(outputPath, zmdData);
 
-    console.log("ZMS 変換完了:", outputPath);
+    console.log("ZMD 変換完了:", outputPath);
 }
 
 if (process.argv.length < 4) {
-    console.error("Usage: node mml_to_zms.js <input.mml> <output.zms>");
+    console.error("Usage: node mml_to_zmd.js <input.mml> <output.zmd>");
     process.exit(1);
 }
 
