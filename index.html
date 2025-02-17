@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Z-Music2 Sample</title>
+  <!-- distフォルダではなく、同一階層などから直接z-music.jsを読み込む -->
+  <script src="z-music.js"></script>
+  <script>
+    // AudioContextの生成（Web Audio API利用）
+    const myAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    // 例としてGainNodeを作成（任意のAudioNodeに接続可能）
+    const myAudioNodeCreatedFromMyAudioContext = myAudioContext.createGain();
+
+    // XHRでArrayBufferを取得するためのPromiseラッパー関数
+    function xhr(url) {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.responseType = 'arraybuffer';
+        xhr.onload = () => {
+          resolve(xhr.response);
+          xhr.abort();
+        };
+        xhr.onerror = (e) => reject(e);
+        xhr.send();
+      });
+    }
+
+    // ZMUSICの各種初期設定
+    // 1. フォントファイルなどの追加リソース（例：音源定義ファイル）
+    ZMUSIC.install(['ZMUSIC208.X']);
+    // 2. バッファサイズを8192に設定
+    ZMUSIC.install(null, { buffer: 8192 });
+    // 3. 使用するAudioContextを指定
+    ZMUSIC.install(null, { context: myAudioContext });
+    // 4. 作成したAudioNodeに接続（任意のエフェクトや出力ノードに接続可能）
+    ZMUSIC.connect(myAudioNodeCreatedFromMyAudioContext);
+
+    // 音楽データ（拡張子 .zms ）を読み込み、コンパイル＆再生
+    Promise.all([
+      // 必要なインストール処理（内部で初期化などを行う）
+      ZMUSIC.install(),
+      // 音楽データをXHRで読み込む
+      xhr('data/bgm1.zms')
+    ]).then(results => {
+      // 読み込んだArrayBuffer（results[1]）をコンパイルして再生
+      ZMUSIC.compileAndPlay(results[1]);
+    });
+  </script>
+</head>
+<body>
+  <!-- ボタンをクリックすると、ミュート状態を解除（AudioContextの再開など） -->
+  <button onclick="ZMUSIC.resume()">Unmute</button>
+</body>
+</html>
