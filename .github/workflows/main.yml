@@ -1,4 +1,4 @@
-name: Convert MML to ZMS
+name: Convert MML to ZMD
 
 on:
   push:
@@ -21,15 +21,15 @@ jobs:
           node-version: '18'
 
       - name: 必要なフォルダを作成
-        run: mkdir -p date
+        run: mkdir -p data
 
-      - name: MML を ZMS に変換
-        run: node tools/mml_to_zms.js input.mml date/bgm1.zms
+      - name: MML を ZMD に変換
+        run: node tools/mml_to_zmd.js input.mml data/bgm1.zmd
 
       - name: 変換結果をコミット＆プッシュ
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add date/bgm1.zms
-          git commit -m "Convert MML to ZMS: bgm1.zms updated"
+          git add data/bgm1.zmd
+          git commit -m "Convert MML to ZMD: bgm1.zmd updated"
           git push origin main
