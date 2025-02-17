@@ -2,13 +2,56 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>ZMUSIC Example</title>
+  <title>ZMUSIC Example with Error Log</title>
   <script src="dist/zmusic.js"></script>
+  <style>
+    /* エラーログ表示用のスタイル */
+    #errorLog {
+      white-space: pre-wrap;
+      background: #fdd;
+      border: 1px solid #f00;
+      padding: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
   <button id="playButton">Play Music</button>
+  <!-- エラーログ表示用のエリア -->
+  <div id="errorLog"></div>
+  
   <script>
-    // Helper function to perform an XHR request and fetch binary data.
+    // エラーログを画面に出力するヘルパー関数
+    function logError(message) {
+      var errorLog = document.getElementById('errorLog');
+      if (errorLog) {
+        errorLog.textContent += message + "\n";
+      }
+    }
+
+    // console.error を上書きして、エラーをページ上にも表示する
+    (function() {
+      var oldError = console.error;
+      console.error = function(...args) {
+        oldError.apply(console, args);
+        logError(args.join(' '));
+      };
+    })();
+
+    // グローバルなエラーイベントのキャッチ
+    window.addEventListener('error', function(e) {
+      logError('Error: ' + e.message + ' at ' + e.filename + ':' + e.lineno + ':' + e.colno);
+    });
+
+    // 未処理のPromiseエラーもキャッチ
+    window.addEventListener('unhandledrejection', function(e) {
+      logError('Unhandled rejection: ' + (e.reason && e.reason.stack ? e.reason.stack : e.reason));
+    });
+
+    // ヘルパー関数: XHRリクエストでバイナリデータを取得
     function xhr(url) {
       return new Promise(function(resolve, reject) {
         var req = new XMLHttpRequest();
@@ -18,31 +61,33 @@
           if (req.status >= 200 && req.status < 300) {
             resolve(req.response);
           } else {
-            reject(new Error('Failed to load ' + url + ': status ' + req.status));
+            var errorMsg = 'Failed to load ' + url + ': status ' + req.status;
+            reject(new Error(errorMsg));
           }
         };
         req.onerror = function() {
-          reject(new Error('Network error while trying to load ' + url));
+          var errorMsg = 'Network error while trying to load ' + url;
+          reject(new Error(errorMsg));
         };
         req.send();
       });
     }
 
-    // Set up event listener for the button so that all audio playback steps occur after a user gesture.
+    // ボタンのクリックでオーディオ再生処理を開始する
     document.getElementById('playButton').addEventListener('click', function() {
-      // Resume or create the AudioContext after user interaction.
+      // ユーザー操作後に AudioContext を再開または生成する
       if (ZMUSIC && typeof ZMUSIC.resume === 'function') {
         ZMUSIC.resume();
       }
       
-      // Now load and install the music resources.
+      // 音楽リソースの読み込みとインストール
       Promise.all([
         ZMUSIC.install(),
         xhr('data/bgm1.zmd'),
         xhr('data/bgm.zpd')
       ])
       .then(results => {
-        // Start playing the track using the loaded data.
+        // 読み込んだデータを使って音楽を再生する
         ZMUSIC.play(results[1], results[2]);
       })
       .catch(error => {
