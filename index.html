@@ -3,25 +3,23 @@
 <head>
   <meta charset="utf-8">
   <title>Z-Music2 Sample</title>
-  <!-- wasm ファイルのパスを指定（dist フォルダ内にある場合） -->
+  <!-- wasmファイルの配置パスを指定 -->
   <script>
     var Module = {
       locateFile: function (path, prefix) {
         if (path.endsWith('.wasm')) {
-          return 'dist/' + path;  // wasmファイルが dist フォルダ内にある場合
+          return 'dist/' + path;
         }
         return prefix + path;
       }
+      // AudioContextは後で設定します
     };
   </script>
-  <!-- distフォルダから z-music.js を読み込む -->
-  <script src="dist/zmusic.js"></script>
 </head>
 <body>
-  <!-- ユーザー操作で AudioContext を再開し、初期化処理を開始 -->
   <button id="startButton">Start Audio</button>
   <script>
-    // XHRで ArrayBuffer を取得するための Promise ラッパー関数
+    // XHRで ArrayBuffer を取得するための Promise ラッパー
     function xhr(url) {
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -36,37 +34,41 @@
       });
     }
 
-    let myAudioContext;
-    let myAudioNodeCreatedFromMyAudioContext;
-
-    // ユーザーがボタンをクリックしたタイミングで初期化処理を実行
     document.getElementById('startButton').addEventListener('click', function() {
-      // AudioContext はユーザー操作後に生成または再開する
-      if (!myAudioContext) {
-        myAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
+      // ユーザー操作後に AudioContext を作成し、再開する
+      var myAudioContext = new (window.AudioContext || window.webkitAudioContext)();
       myAudioContext.resume().then(() => {
         console.log("AudioContext resumed");
-        // AudioNode（ここでは GainNode ）を生成
-        myAudioNodeCreatedFromMyAudioContext = myAudioContext.createGain();
+        // ZMUSIC が利用する AudioContext として設定
+        Module.context = myAudioContext;
+        // 手動で作成する AudioNode も同じコンテキストから作成
+        var myGainNode = myAudioContext.createGain();
 
-        // ZMUSIC の初期設定（各種リソース、バッファサイズ、AudioContext 指定）
-        ZMUSIC.install(['ZMUSIC208.X']);
-        ZMUSIC.install(null, { buffer: 8192 });
-        ZMUSIC.install(null, { context: myAudioContext });
-        // 作成した AudioNode を ZMUSIC に接続
-        ZMUSIC.connect(myAudioNodeCreatedFromMyAudioContext);
+        // 動的に zmusic.js (distフォルダ内) を読み込む
+        var script = document.createElement('script');
+        script.src = "dist/zmusic.js";
+        script.onload = function() {
+          // zmusic.js 読み込み後、ZMUSIC の初期設定を実行
+          ZMUSIC.install(['ZMUSIC208.X']);
+          ZMUSIC.install(null, { buffer: 8192 });
+          ZMUSIC.install(null, { context: myAudioContext });
+          // ZMUSIC 内部の出力ノードと、手動の GainNode を接続
+          ZMUSIC.connect(myGainNode);
 
-        // ZMUSIC の内部初期化と音楽データの読み込み・再生
-        Promise.all([
-          ZMUSIC.install(),
-          xhr('data/bgm1.zms')
-        ]).then(results => {
-          // 読み込んだ ArrayBuffer（results[1]）をコンパイルして再生
-          ZMUSIC.compileAndPlay(results[1]);
-        }).catch(err => {
-          console.error("Error loading audio:", err);
-        });
+          // 音楽データ（.zms ファイル）の読み込みと再生
+          Promise.all([
+            ZMUSIC.install(),
+            xhr('data/bgm1.zms')
+          ]).then(results => {
+            ZMUSIC.compileAndPlay(results[1]);
+          }).catch(err => {
+            console.error("Error loading audio:", err);
+          });
+        };
+        script.onerror = function() {
+          console.error("Failed to load zmusic.js");
+        };
+        document.body.appendChild(script);
       }).catch(err => {
         console.error("AudioContext resume error:", err);
       });
