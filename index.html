@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>ZMUSIC Example with Error Log</title>
+  <title>ZMUSIC Example with Error Log and Smartphone Optimizations</title>
   <script src="dist/zmusic.js"></script>
   <style>
     /* エラーログ表示用のスタイル */
@@ -15,6 +15,13 @@
       overflow-y: auto;
       font-family: monospace;
       margin-top: 20px;
+    }
+    /* スマホ向けにプレイスタートボタンを大きく表示 */
+    @media only screen and (max-width: 600px) {
+      #playButton {
+        font-size: 24px;
+        padding: 20px;
+      }
     }
   </style>
 </head>
@@ -79,20 +86,17 @@
       if (ZMUSIC && typeof ZMUSIC.resume === 'function') {
         ZMUSIC.resume();
       }
-      
-      // 音楽リソースの読み込みとインストール
-      Promise.all([
-        ZMUSIC.install(),
-        xhr('data/bgm1.zmd'),
-        xhr('data/bgm.zpd')
-      ])
-      .then(results => {
-        // 読み込んだデータを使って音楽を再生する
-        ZMUSIC.play(results[1], results[2]);
-      })
-      .catch(error => {
-        console.error('Error during loading or playing music:', error);
-      });
+
+      // zpd は省略して、zmdのみ読み込み＆再生する
+      xhr('data/bgm1.zmd')
+        .then(zmd => {
+          ZMUSIC.install().then(() => {
+            ZMUSIC.play(zmd);
+          });
+        })
+        .catch(error => {
+          console.error('Error during loading or playing music:', error);
+        });
     });
   </script>
 </body>
