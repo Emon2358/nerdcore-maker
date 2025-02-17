@@ -1,0 +1,34 @@
+name: Convert MML to ZMS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  convert-mml:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: 必要なツールをインストール（コンパイラが GitHub にある場合）
+        run: |
+          git clone https://github.com/zenji-soft/zmusic-compiler.git
+          cd zmusic-compiler
+          make  # 必要なら make でビルド
+          echo "$(pwd)" >> $GITHUB_PATH
+
+      - name: date フォルダを作成
+        run: mkdir -p date
+
+      - name: MML を ZMS に変換
+        run: |
+          zmusic-compiler/zmusic_compiler input.mml -o date/bgm1.zms
+
+      - name: ZMS ファイルを GitHub Actions のアーティファクトとして保存
+        uses: actions/upload-artifact@v4
+        with:
+          name: bgm1_zms
+          path: date/bgm1.zms
