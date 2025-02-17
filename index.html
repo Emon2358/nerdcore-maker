@@ -1,81 +1,28 @@
-<!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>Z-Music2 Sample</title>
-  <!-- wasmファイルのパス指定（distフォルダ内の場合） -->
-  <script>
-    var Module = {
-      locateFile: function (path, prefix) {
-        if (path.endsWith('.wasm')) {
-          return 'dist/' + path;
-        }
-        return prefix + path;
-      }
-      // onRuntimeInitialized は後で設定します
-    };
-  </script>
+<script src="dist/zmusic.js"></script>
+<script>
+// Make XHR to support Promise.
+function xhr (url) {
+  return new Promise(function (resolve, reject) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = 'arraybuffer';
+    xhr.addEventListener('load', e => {
+      resolve(xhr.response);
+      xhr.abort();
+    }, false);
+    xhr.send();
+  });
+}
+
+Promise.all([
+    ZMUSIC.install(),
+    xhr('data/bgm1.zmd'),
+    xhr('data/bgm.zpd')]).then(results => {
+  ZMUSIC.play(results[1], results[2]);
+});
+</script>
 </head>
-<body>
-  <button id="startButton">Start Audio</button>
-  <script>
-    // XHR を使って ArrayBuffer を取得する関数
-    function xhr(url) {
-      return new Promise((resolve, reject) => {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url, true);
-        xhr.responseType = 'arraybuffer';
-        xhr.onload = function() {
-          resolve(xhr.response);
-          xhr.abort();
-        };
-        xhr.onerror = function(e) { reject(e); };
-        xhr.send();
-      });
-    }
-
-    document.getElementById('startButton').addEventListener('click', function() {
-      // ユーザー操作後に AudioContext を作成＆再開
-      var myAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-      myAudioContext.resume().then(function() {
-        console.log("AudioContext resumed");
-        // ZMUSIC が利用する AudioContext を指定
-        Module.context = myAudioContext;
-        // 同じ AudioContext から GainNode を作成
-        var myGainNode = myAudioContext.createGain();
-
-        // wasm ランタイムが初期化されたときの処理を設定
-        Module.onRuntimeInitialized = function() {
-          console.log("ZMUSIC runtime initialized");
-          // ZMUSIC の各種初期設定
-          ZMUSIC.install(['ZMUSIC208.X']);
-          ZMUSIC.install(null, { buffer: 8192 });
-          ZMUSIC.install(null, { context: myAudioContext });
-          // ZMUSIC 内部の出力を、ユーザー側で作成した GainNode に接続
-          ZMUSIC.connect(myGainNode);
-
-          // 音楽データ (.zms) の読み込みと再生
-          Promise.all([
-            ZMUSIC.install(),
-            xhr('data/bgm1.zms')
-          ]).then(function(results) {
-            ZMUSIC.compileAndPlay(results[1]);
-          }).catch(function(err) {
-            console.error("Error loading audio:", err);
-          });
-        };
-
-        // 動的に dist/zmusic.js を読み込む
-        var script = document.createElement('script');
-        script.src = "dist/zmusic.js";
-        script.onerror = function() {
-          console.error("Failed to load zmusic.js");
-        };
-        document.body.appendChild(script);
-      }).catch(function(err) {
-        console.error("AudioContext resume error:", err);
-      });
-    });
-  </script>
-</body>
+<body><button onclick="ZMUSIC.resume()">Unmute</button></body>
 </html>
