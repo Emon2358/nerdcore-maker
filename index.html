@@ -2,10 +2,19 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>ZMUSIC Example with Error Log and Smartphone Optimizations</title>
+  <title>Vue + Ace Editor + ZMUSIC Example</title>
+  <!-- Vue.js (Vue 3) の読み込み -->
+  <script src="https://unpkg.com/vue@3"></script>
+  <!-- Ace Editor の読み込み -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.js" integrity="sha512-bsdv4I2I7oJU3iLt0+4b0f0xkxKfygS/dh5qvyF/02Egejr3DWi1bK7LzzN5fiHJCUcmGwB5x2ufdCTIrs0alA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!-- ZMUSIC ライブラリ -->
   <script src="dist/zmusic.js"></script>
   <style>
-    /* エラーログ表示用のスタイル */
+    #editor {
+      height: 300px;
+      width: 100%;
+      border: 1px solid #ccc;
+    }
     #errorLog {
       white-space: pre-wrap;
       background: #fdd;
@@ -16,97 +25,90 @@
       font-family: monospace;
       margin-top: 20px;
     }
-    /* スマホ向けにプレイスタートボタンを大きく表示 */
-    @media only screen and (max-width: 600px) {
-      #playButton {
-        font-size: 24px;
-        padding: 20px;
-      }
+    button {
+      font-size: 16px;
+      padding: 10px 20px;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
-  <button id="playButton">Play Music</button>
-  <!-- エラーログ表示用のエリア -->
-  <div id="errorLog"></div>
+  <div id="app">
+    <div id="editor"></div>
+    <button @click="playMusic">Play Music</button>
+    <div id="errorLog">{{ errorLog }}</div>
+  </div>
   
   <script>
-    // エラーログを画面に出力するヘルパー関数
-    function logError(message) {
-      const errorLog = document.getElementById('errorLog');
-      if (errorLog) {
-        errorLog.textContent += message + "\n";
-      }
-    }
+    const { createApp } = Vue;
+    
+    createApp({
+      data() {
+        return {
+          editor: null,
+          errorLog: ''
+        }
+      },
+      methods: {
+        logError(message) {
+          this.errorLog += message + "\n";
+          console.error(message);
+        },
+        async playMusic() {
+          try {
+            console.log("Playボタンがクリックされました。");
 
-    // console.error を上書きして、エラーをページ上にも表示する
-    (function() {
-      const oldError = console.error;
-      console.error = function(...args) {
-        oldError.apply(console, args);
-        logError(args.join(' '));
-      };
-    })();
-
-    // グローバルなエラーイベントのキャッチ
-    window.addEventListener('error', function(e) {
-      logError('Error: ' + e.message + ' at ' + e.filename + ':' + e.lineno + ':' + e.colno);
-    });
-
-    // 未処理のPromiseエラーもキャッチ
-    window.addEventListener('unhandledrejection', function(e) {
-      logError('Unhandled rejection: ' + (e.reason && e.reason.stack ? e.reason.stack : e.reason));
-    });
-
-    // fetch API を使ってバイナリデータを取得するヘルパー関数
-    async function fetchBinary(url) {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error('Failed to load ' + url + ': status ' + response.status);
-      }
-      return response.arrayBuffer();
-    }
-
-    // AudioWorkletNode のサポート状況をチェック（サポートされていなければ警告）
-    if (!window.AudioWorkletNode) {
-      console.warn('AudioWorkletNode is not supported in this browser. Falling back to ScriptProcessorNode, which is deprecated.');
-    }
-
-    // ボタンのクリックでオーディオ再生処理を開始する
-    document.getElementById('playButton').addEventListener('click', async function() {
-      try {
-        console.log("Playボタンがクリックされました。");
-
-        // ZMUSIC ライブラリの AudioContext を再開する（または独自に作成して再開）
-        if (window.ZMUSIC && typeof ZMUSIC.resume === 'function') {
-          await ZMUSIC.resume();
-          console.log("ZMUSIC.resume() により AudioContext を再開しました。");
-        } else if (window.AudioContext) {
-          // 万が一 ZMUSIC 内で管理されていなければ、自前で AudioContext の再開処理
-          const ac = new AudioContext();
-          if (ac.state === 'suspended') {
-            await ac.resume();
-            console.log("新規 AudioContext を生成し、再開しました。");
+            // Ace エディタからテキストを取得
+            const text = this.editor.getValue();
+            console.log("Aceエディタから取得したテキスト:", text);
+            
+            // テキストを ArrayBuffer に変換（zmusic.js がバイナリデータを期待している場合）
+            const encoder = new TextEncoder();
+            const buffer = encoder.encode(text).buffer;
+            
+            // AudioContext の再開（ZMUSIC.resume() が実装されている場合）
+            if (window.ZMUSIC && typeof ZMUSIC.resume === 'function') {
+              await ZMUSIC.resume();
+              console.log("ZMUSIC.resume() により AudioContext を再開しました。");
+            }
+            
+            // ZMUSIC のインストール
+            console.log("ZMUSIC をインストール中…");
+            await ZMUSIC.install();
+            console.log("ZMUSIC のインストールが完了しました。");
+            
+            // （もし実装されていれば）音量の設定
+            if (ZMUSIC.setVolume) {
+              ZMUSIC.setVolume(1.0);
+              console.log("Volume set to 1.0");
+            }
+            
+            // 再生開始
+            console.log("音楽再生を開始します。");
+            ZMUSIC.play(buffer);
+          } catch (error) {
+            this.logError('Error during playing music: ' + error);
           }
         }
-
-        // ZMSファイルの取得（拡張子を zms に変更）
-        console.log("ZMSファイルを読み込み中…");
-        const zmsData = await fetchBinary('data/bgm1.zms');
-        console.log("ZMSファイルの読み込みに成功しました。");
-
-        // ZMUSIC のインストール
-        console.log("ZMUSIC をインストール中…");
-        await ZMUSIC.install();
-        console.log("ZMUSIC のインストールが完了しました。");
-
-        // 再生開始
-        console.log("音楽再生を開始します。");
-        ZMUSIC.play(zmsData);
-      } catch (error) {
-        console.error('Error during loading or playing music:', error);
+      },
+      mounted() {
+        // Ace Editor の初期化
+        this.editor = ace.edit("editor");
+        this.editor.setTheme("ace/theme/monokai");
+        // エディタのモードは用途に合わせて変更（ここでは JavaScript モード）
+        this.editor.session.setMode("ace/mode/javascript");
+        // 初期コンテンツの設定（必要に応じて MML や ZMS のサンプルを記述）
+        this.editor.setValue("// ここに MML / ZMS の内容を記述\n");
+        
+        // グローバルエラーのキャッチ（オプション）
+        window.addEventListener('error', (e) => {
+          this.logError('Error: ' + e.message + ' at ' + e.filename + ':' + e.lineno + ':' + e.colno);
+        });
+        window.addEventListener('unhandledrejection', (e) => {
+          this.logError('Unhandled rejection: ' + (e.reason && e.reason.stack ? e.reason.stack : e.reason));
+        });
       }
-    });
+    }).mount('#app');
   </script>
 </body>
 </html>
