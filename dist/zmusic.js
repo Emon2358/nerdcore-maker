@@ -194,8 +194,7 @@ var midiOut = function (d) {
 
 var audioContext = null;
 var audioBufferSize = 2048;
-var scriptProcessor = null;
-var zmusicNode = null; // For AudioWorkletNode
+var zmusicNode = null; // Now only using AudioWorkletNode
 var bufferSource = null;
 var zmusicResolver = null;
 var zmusicBuffer = 0;
@@ -223,36 +222,12 @@ var zmusicPrerender = function () {
   zmusicPrerenderBufferReady = true;
 };
 
-function createScriptProcessor(){
-  scriptProcessor = audioContext.createScriptProcessor(audioBufferSize, 2, 2);
-  scriptProcessor.connect(audioContext.destination);
-  scriptProcessor.addEventListener('audioprocess', function (e) {
-    if (!zmusicPlaying)
-      return;
-    if (!zmusicPrerenderBufferReady)
-      zmusicPrerender();
-
-    var sl = zmusicPrerenderBuffer[0];
-    var sr = zmusicPrerenderBuffer[1];
-    var dl = e.outputBuffer.getChannelData(0);
-    var dr = e.outputBuffer.getChannelData(1);
-    for (var i = 0; i < audioBufferSize; ++i) {
-      dl[i] = sl[i];
-      dr[i] = sr[i];
-    }
-
-    zmusicPrerenderBufferReady = false;
-    setTimeout(zmusicPrerender, 0);
-  }, false);
-}
-
 function updateAudioWorklet(){
   if(zmusicPlaying){
     if(!zmusicPrerenderBufferReady)
       zmusicPrerender();
     if (zmusicPrerenderBufferReady && zmusicNode) {
       // Send a copy of the current prerender buffers to the worklet.
-      // Here Array.from is used to create a regular array copy.
       zmusicNode.port.postMessage({
         command: 'data',
         bufferL: Array.from(zmusicPrerenderBuffer[0]),
@@ -279,30 +254,15 @@ var zmusicReady = function (code) {
       // Start updating the worklet with audio data.
       updateAudioWorklet();
       ZMUSIC.state = zmusicPlaying ? ZMUSIC.ACTIVE : ZMUSIC.WAITING;
-      // Safari fallback handling is not needed here.
       zmusicPlaying = false;
       zmusicResolver.resolve();
     }).catch(err => {
-      console.warn('AudioWorklet initialization failed, falling back to ScriptProcessorNode', err);
-      createScriptProcessor();
-      ZMUSIC.state = zmusicPlaying ? ZMUSIC.ACTIVE : ZMUSIC.WAITING;
-      zmusicPlaying = false;
-      zmusicResolver.resolve();
+      console.error('AudioWorklet initialization failed:', err);
+      zmusicResolver.reject(err);
     });
   } else {
-    // Fallback if AudioWorklet is not supported.
-    createScriptProcessor();
-    ZMUSIC.state = zmusicPlaying ? ZMUSIC.ACTIVE : ZMUSIC.WAITING;
-    zmusicPlaying = false;
-    zmusicResolver.resolve();
-  }
-  
-  if (!window.AudioContext) {
-    // Safari still provides the old API.
-    bufferSource = audioContext.createBufferSource();
-    bufferSource.connect(scriptProcessor);
-    if (zmusicPlaying)
-      bufferSource.noteOn(0);
+    console.error("AudioWorklet is not supported in this browser.");
+    zmusicResolver.reject("AudioWorklet not supported");
   }
 };
 
@@ -329,7 +289,6 @@ var Module = {
     run(Module.arguments);
     // Restores the original |shouldRunNow| so that doRun() does not call main()
     // again with the original arguments after this function finishes.
-    // |calledRun| should be already restored during the run() call above.
     shouldRunNow = false;
   }
 };
@@ -402,7 +361,7 @@ ZMUSIC = {
       if (zmusicPlaying)
         ZMUSIC.stop();
       if (ZMUSIC.state == ZMUSIC.WAITING && !window.AudioContext)
-        bufferSource.noteOn(0);
+        ; // legacy branch removed
       ZMUSIC.state = ZMUSIC.PLAYING;
 
       var zpdPromise = null;
@@ -465,7 +424,7 @@ ZMUSIC = {
       if (zmusicPlaying)
         ZMUSIC.stop();
       if (ZMUSIC.state == ZMUSIC.WAITING && !window.AudioContext)
-        bufferSource.noteOn(0);
+        ; // legacy branch removed
       ZMUSIC.state = ZMUSIC.PLAYING;
 
       var d8 = new Uint8Array(data);
@@ -491,9 +450,7 @@ ZMUSIC = {
    * @param {AudioNode} node AudioNode to connect for outputs
    */
   connect: function (node) {
-    if (scriptProcessor)
-      scriptProcessor.connect(node);
-    else if (zmusicNode)
+    if (zmusicNode)
       zmusicNode.connect(node);
   },
 
@@ -502,9 +459,7 @@ ZMUSIC = {
    * @param {AudioNode} node AudioNode to disconnect if specified (optional)
    */
   disconnect: function (node) {
-    if (scriptProcessor)
-      scriptProcessor.disconnect(node);
-    else if (zmusicNode)
+    if (zmusicNode)
       zmusicNode.disconnect(node);
   },
 
@@ -535,5 +490,6 @@ ZMUSIC = {
   }
 };
 
-/* Unexpected token here should be resolved by epilog.js */var Module=typeof Module!=="undefined"?Module:{};if(!Module.expectedDataFileDownloads){Module.expectedDataFileDownloads=0}Module.expectedData[...]
+/* Unexpected token here should be resolved by epilog.js */
+var Module=typeof Module!=="undefined"?Module:{};if(!Module.expectedDataFileDownloads){Module.expectedDataFileDownloads=0}Module.expectedData[...]
 })();
