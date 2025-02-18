@@ -5,7 +5,7 @@
   <title>Vue + Ace Editor + ZMUSIC Example</title>
   <!-- プロダクション版の Vue を読み込む -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-  <!-- integrity 属性を削除して Ace Editor を読み込む -->
+  <!-- Ace Editor を読み込む -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.js"></script>
   <!-- ZMUSIC ライブラリ -->
   <script src="dist/zmusic.js"></script>
@@ -62,14 +62,16 @@
             const text = this.editor.getValue();
             console.log("Aceエディタから取得したテキスト:", text);
             
-            // テキストを ArrayBuffer に変換
-            const encoder = new TextEncoder();
-            const buffer = encoder.encode(text).buffer;
-            
-            // AudioContext の再開（ZMUSIC.resume() が実装されている場合）
+            // AudioContext の再開
             if (window.ZMUSIC && typeof ZMUSIC.resume === 'function') {
               await ZMUSIC.resume();
               console.log("ZMUSIC.resume() により AudioContext を再開しました。");
+            }
+            
+            // ※ AudioWorkletNode に対応している場合、利用を有効にする（ZMUSIC 側の実装が必要）
+            if (window.AudioWorkletNode && ZMUSIC.setUseAudioWorklet) {
+              ZMUSIC.setUseAudioWorklet(true);
+              console.log("AudioWorkletNode を使用するように設定しました。");
             }
             
             // ZMUSIC のインストール
@@ -79,12 +81,16 @@
             
             // （もし実装されていれば）音量の設定
             if (ZMUSIC.setVolume) {
+              // ※ 音量の範囲がライブラリ依存の場合、必要に応じて調整してください
               ZMUSIC.setVolume(1.0);
               console.log("Volume set to 1.0");
             }
             
-            // 再生開始
             console.log("音楽再生を開始します。");
+            
+            // テキストを ArrayBuffer に変換して再生（必要に応じて、直接文字列を渡すことも検討）
+            const encoder = new TextEncoder();
+            const buffer = encoder.encode(text).buffer;
             ZMUSIC.play(buffer);
           } catch (error) {
             this.logError('Error during playing music: ' + error);
@@ -95,11 +101,10 @@
         // Ace Editor の初期化
         this.editor = ace.edit("editor");
         this.editor.setTheme("ace/theme/monokai");
-        // 編集可能なテキストモードに設定
         this.editor.session.setMode("ace/mode/text");
         this.editor.setReadOnly(false);
-        // 初期コンテンツの設定（-1 はカーソル位置を変更しないため）
-        this.editor.setValue("// ここに MML / ZMS の内容を記述\n", -1);
+        // 初期コンテンツ：最初の行にヘッダー "ZMUSIC ZMS" を配置する
+        this.editor.setValue("ZMUSIC ZMS\n// ここに MML / ZMS の内容を記述\n", -1);
         
         // グローバルエラーのキャッチ（オプション）
         window.addEventListener('error', (e) => {
