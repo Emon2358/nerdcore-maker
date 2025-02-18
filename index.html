@@ -25,15 +25,20 @@
       }
 
       // 再生ボタンがクリックされたときに実行する処理
-      function playMusic() {
-        Promise.all([
-          ZMUSIC.install(),
-          xhr('./test.zms')
-        ]).then(results => {
-          ZMUSIC.play(results[1]);
-        }).catch(error => {
-          console.error("エラーが発生しました:", error);
-        });
+      async function playMusic() {
+        // ユーザー操作で AudioContext を再開
+        if (window.ZMUSIC && ZMUSIC && ZMUSIC.resume) {
+          ZMUSIC.resume();
+        }
+        try {
+          const [_, zms] = await Promise.all([
+            ZMUSIC.install(),
+            xhr('./test.zms')
+          ]);
+          ZMUSIC.play(zms);
+        } catch (e) {
+          console.error("エラーが発生しました:", e);
+        }
       }
     </script>
   </head>
