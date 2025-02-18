@@ -1,174 +1,68 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8">
-    <title>ZMUSIC MML Editor</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/plaintext/plaintext.min.js"></script>
-    <script src="dist/zmusic.js"></script>
-    <script>
-      function out(text) {
-        var outputElement = document.getElementById("console-output");
-        if (outputElement) {
-          outputElement.textContent += text + "\n";
-          // 自動スクロール
-          outputElement.scrollTop = outputElement.scrollHeight;
-        } else {
-          console.log(text);
-        }
-      }
-
-      var editor;
-      const defaultMml = `t150
-@1 v116 o5 q6
-c<b>cec>b<c> c<c>b-<cec>b-<c>
-c<a>cec>a<c> c<c>a-<cec>a-<c>`;
-
-      function processString(str) {
-        // UTF-8エンコードされた文字列に変換
-        const encoder = new TextEncoder();
-        const decoder = new TextDecoder('utf-8');
-        
-        // 文字列をUTF-8バイト配列に変換し、再度文字列に戻す
-        return decoder.decode(encoder.encode(str));
-      }
-
-      function convertMml(mml) {
-        // 基本的なクリーニング
-        let converted = mml
-          .replace(/\(i\)/g, '')
-          .replace(/\(o(\d+)\)/g, 't$1')
-          .replace(/\(t\d+\)/g, '')
-          .replace(/\(m\d+,\d+\)/g, '')
-          .replace(/\(afm\d+,\d+\)/g, '')
-          .replace(/@v(\d+)/g, 'v$1')
-          .replace(/\[do\]/g, '')
-          .replace(/loop/g, '')
-          .replace(/\(p\)/g, '')
-          // 制御文字を削除
-          .replace(/[\x00-\x1F\x7F]/g, '')
-          // 空白行の正規化
-          .replace(/\n\s*\n/g, '\n')
-          .trim();
-
-        // UTF-8エンコーディング処理を適用
-        return processString(converted);
-      }
-
-      function initializeEditor() {
-        editor = CodeMirror.fromTextArea(document.getElementById("mml-editor"), {
-          mode: "plaintext",
-          lineNumbers: true,
-          theme: "default",
-          viewportMargin: Infinity,
-          lineWrapping: true
-        });
-
-        return ZMUSIC.install()
-          .then(() => {
-            const convertedMml = convertMml(defaultMml);
-            editor.setValue(convertedMml);
-            console.log("Initialization successful");
-          })
-          .catch(err => {
-            console.error("Initialization error:", err);
-            throw err;
-          });
-      }
-
-      document.addEventListener("DOMContentLoaded", function() {
-        initializeEditor().catch(err => {
-          document.getElementById("error-message").textContent = "Error initializing ZMUSIC: " + err;
-        });
-      });
-
-      function playMml() {
-        const errorElement = document.getElementById("error-message");
-        errorElement.textContent = ""; // エラーメッセージをクリア
-        
-        try {
-          const mmlCode = editor.getValue();
-          if (!mmlCode.trim()) {
-            throw new Error("MML code is empty");
-          }
-
-          const convertedMml = convertMml(mmlCode);
-          console.log("Playing MML:", convertedMml);
-          
-          // メモリリークを防ぐため、再生前に停止
-          if (typeof ZMUSIC.stop === 'function') {
-            ZMUSIC.stop();
-          }
-
-          // 100ms待ってから再生
-          setTimeout(() => {
-            ZMUSIC.compileAndPlay(convertedMml);
-          }, 100);
-
-        } catch (err) {
-          console.error("Playback error:", err);
-          errorElement.textContent = "Error playing MML: " + err.message;
-        }
-      }
-
-      function stopPlayback() {
-        if (typeof ZMUSIC.stop === 'function') {
-          ZMUSIC.stop();
-        }
-      }
-    </script>
-    <style>
-      body {
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 20px;
-        font-family: Arial, sans-serif;
-      }
-      .CodeMirror {
-        height: auto;
-        border: 1px solid #ddd;
-        font-size: 14px;
-        margin-bottom: 10px;
-        min-height: 200px;
-      }
-      #console-output {
-        margin-top: 20px;
-        padding: 10px;
-        border: 1px solid #ccc;
-        background: #f9f9f9;
-        height: 150px;
-        overflow-y: auto;
-        white-space: pre-wrap;
-        font-family: monospace;
-      }
-      button {
-        padding: 8px 16px;
-        margin-right: 10px;
-        cursor: pointer;
-      }
-      #error-message {
-        color: red;
-        margin: 10px 0;
-        padding: 10px;
-        background-color: #fff3f3;
-        border: 1px solid #ffcdd2;
-        border-radius: 4px;
-        display: none;
-      }
-      #error-message:not(:empty) {
-        display: block;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>ZMUSIC MML Editor</h1>
-    <div id="error-message"></div>
-    <textarea id="mml-editor"></textarea>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Nerdcore Maker</title>
+  <!-- Load Vue.js -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+  <!-- Load Ace Editor -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.js"></script>
+  <!-- Load zmusic.js -->
+  <script src="dist/zmusic.js"></script>
+  <style>
+    /* Style for the Ace editor container */
+    #editor {
+      height: 300px;
+      width: 100%;
+      border: 1px solid #ccc;
+    }
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+    }
+    button {
+      margin-top: 10px;
+      padding: 5px 10px;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h1>Nerdcore Maker</h1>
+    <!-- Ace editor will be mounted on this div -->
+    <div id="editor"></div>
     <br>
-    <button onclick="playMml()">Play</button>
-    <button onclick="ZMUSIC.resume()">Unmute</button>
-    <button onclick="stopPlayback()">Stop</button>
-    <pre id="console-output"></pre>
-  </body>
+    <!-- Click button to send editor content to zmusic.js for playback -->
+    <button @click="playMusic">再生</button>
+  </div>
+
+  <script>
+    new Vue({
+      el: '#app',
+      data: {
+        editor: null,
+      },
+      mounted() {
+        // Initialize Ace editor on the #editor div
+        this.editor = ace.edit("editor");
+        this.editor.setTheme("ace/theme/monokai");
+        // Set the language mode to JavaScript (you can change this if needed)
+        this.editor.session.setMode("ace/mode/javascript");
+      },
+      methods: {
+        playMusic() {
+          // Retrieve the current content from Ace editor
+          const code = this.editor.getValue();
+          // Call the playMusic function from zmusic.js and pass the code
+          if (typeof playMusic === 'function') {
+            playMusic(code);
+          } else {
+            console.error("playMusic function is not defined in zmusic.js");
+          }
+        }
+      }
+    });
+  </script>
+</body>
 </html>
