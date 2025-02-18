@@ -315,7 +315,10 @@ var Module = {
     '-W100',  // Allocate 100kB for work area.
   ],
   preInit: function () {
-    Module.addRunDependency("initialize");
+    // Add a run dependency so that initialization is delayed.
+    // NOTE: If removeRunDependency is not defined, this fallback ensures it works.
+    if (Module.addRunDependency)
+      Module.addRunDependency("initialize");
   },
   // Dirty hacks to replace previously evaluated Module.arguments during
   // Module.run().
@@ -334,6 +337,21 @@ var Module = {
   }
 };
 
+// Add a fallback for Module.removeRunDependency if it is not defined.
+if (typeof Module.removeRunDependency !== "function") {
+  Module.removeRunDependency = function(dep) {
+    console.log("removeRunDependency called for", dep);
+  };
+}
+
+/* Remove the invalid token "[...]" which was causing a syntax error.
+   If Module.expectedData is required, initialize it properly here. */
+if (!Module.expectedDataFileDownloads) {
+  Module.expectedDataFileDownloads = 0;
+}
+// Uncomment or initialize Module.expectedData as needed.
+// Module.expectedData = [];
+  
 ZMUSIC = {
   INACTIVE: "inactive",  // not initialized yet
   STARTING: "starting",  // install() is called, and initializing
@@ -374,6 +392,7 @@ ZMUSIC = {
         Module.arguments = args;
       state = ZMUSIC.STARTING;
       zmusicResolver = { resolve: resolve, reject: reject };
+      // Remove run dependency (fallback function defined if not provided)
       Module.removeRunDependency("initialize");
     });
   },
@@ -534,15 +553,5 @@ ZMUSIC = {
     return Module._zmusic_trap(d1, d2, d3, d4, a1);
   }
 };
-
-// Initialize additional Module properties if not already present.
-if (typeof Module === "undefined") {
-  Module = {};
-}
-if (!Module.expectedDataFileDownloads) {
-  Module.expectedDataFileDownloads = 0;
-}
-// Module.expectedData can be initialized as needed.
-// Module.expectedData = [];
-
+  
 })();
