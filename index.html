@@ -90,10 +90,10 @@
           }
         }
 
-        // ZMDファイルの取得
-        console.log("ZMDファイルを読み込み中…");
-        const zmdData = await fetchBinary('data/bgm1.zmd');
-        console.log("ZMDファイルの読み込みに成功しました。");
+        // ZMSファイルの取得（拡張子を zms に変更）
+        console.log("ZMSファイルを読み込み中…");
+        const zmsData = await fetchBinary('data/bgm1.zms');
+        console.log("ZMSファイルの読み込みに成功しました。");
 
         // ZMUSIC のインストール
         console.log("ZMUSIC をインストール中…");
@@ -102,7 +102,7 @@
 
         // 再生開始
         console.log("音楽再生を開始します。");
-        ZMUSIC.play(zmdData);
+        ZMUSIC.play(zmsData);
       } catch (error) {
         console.error('Error during loading or playing music:', error);
       }
