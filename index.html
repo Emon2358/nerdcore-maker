@@ -5,6 +5,7 @@
   <title>Vue + Ace Editor + ZMUSIC Example</title>
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.js"></script>
+  <!-- ZMUSIC library (ensure this is an updated version if available) -->
   <script src="dist/zmusic.js"></script>
   <style>
     #editor {
@@ -37,18 +38,28 @@
   </div>
   
   <script>
-    // ZMUSIC の初期化を待つ
+    // Flag to prevent multiple installations.
     let zmusicInitialized = false;
-    
-    // ユーザーインタラクション後にAudioContextを再開
-    document.addEventListener('click', async () => {
-        if (window.ZMUSIC && typeof ZMUSIC.resume === 'function') {
-            await ZMUSIC.resume();
+
+    // Helper function to initialize/resume AudioContext.
+    async function initAudioContext() {
+      // If ZMUSIC provides a getter for its AudioContext, use it.
+      if (window.ZMUSIC && typeof ZMUSIC.getAudioContext === 'function') {
+        const audioCtx = ZMUSIC.getAudioContext();
+        if (audioCtx.state === 'suspended') {
+          await audioCtx.resume();
         }
-    });
+      } else if (window.AudioContext) {
+        // Fallback in case ZMUSIC doesn't supply an AudioContext.
+        const audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') {
+          await audioCtx.resume();
+        }
+      }
+    }
 
     const { createApp } = Vue;
-    
+
     createApp({
       data() {
         return {
@@ -65,16 +76,32 @@
           if (zmusicInitialized) return;
           
           try {
-            // AudioContext の初期化
-            await ZMUSIC.resume();
+            // Ensure the AudioContext is ready on initialization.
+            await initAudioContext();
             
-            // MIDI モードの設定
-            if (typeof ZMUSIC.setDeviceType === 'function') {
+            // For browsers that support AudioWorklet, attempt to load a worklet module.
+            const audioCtx = window.ZMUSIC && typeof ZMUSIC.getAudioContext === 'function'
+              ? ZMUSIC.getAudioContext() : null;
+            if (audioCtx && audioCtx.audioWorklet) {
+              try {
+                // Load the updated AudioWorklet processor for ZMUSIC.
+                // Make sure that dist/zmusic-worklet.js exists and exports the proper AudioWorkletProcessor.
+                await audioCtx.audioWorklet.addModule('dist/zmusic-worklet.js');
+                console.log("AudioWorklet module loaded successfully.");
+              } catch (workletError) {
+                this.logError("Failed to load AudioWorklet module: " + workletError);
+              }
+            }
+
+            // Set the device type to MIDI if supported.
+            if (window.ZMUSIC && typeof ZMUSIC.setDeviceType === 'function') {
               ZMUSIC.setDeviceType('MIDI');
             }
             
-            // インストール
-            await ZMUSIC.install();
+            // Install ZMUSIC.
+            if (window.ZMUSIC && typeof ZMUSIC.install === 'function') {
+              await ZMUSIC.install();
+            }
             zmusicInitialized = true;
           } catch (error) {
             this.logError('ZMUSIC initialization error: ' + error);
@@ -84,21 +111,24 @@
         async playMusic() {
           try {
             console.log("Playボタンがクリックされました。");
-            
+
             const text = this.editor.getValue();
             console.log("ZMS内容:", text);
             
-            // ZMUSIC の初期化確認
+            // Make sure ZMUSIC is initialized.
             if (!zmusicInitialized) {
               await this.initializeZMUSIC();
             }
             
-            // 再生前に AudioContext を確実に再開
-            await ZMUSIC.resume();
+            // Resume AudioContext upon each playback.
+            await initAudioContext();
             
-            // 直接コンパイル&再生
             console.log("音楽再生を開始します。");
-            ZMUSIC.compileAndPlay(text);
+            if (window.ZMUSIC && typeof ZMUSIC.compileAndPlay === 'function') {
+              ZMUSIC.compileAndPlay(text);
+            } else {
+              this.logError("ZMUSIC library is not properly loaded.");
+            }
             
           } catch (error) {
             this.logError('Playback error: ' + error);
@@ -107,13 +137,13 @@
         }
       },
       async mounted() {
-        // Ace Editor の初期化
+        // Initialize Ace Editor.
         this.editor = ace.edit("editor");
         this.editor.setTheme("ace/theme/monokai");
         this.editor.session.setMode("ace/mode/text");
         this.editor.setReadOnly(false);
         
-        // 初期MIDIモードのZMSコードを設定
+        // Set initial ZMS code.
         this.editor.setValue(`ZMUSIC ZMS
 (i)
 (m1,3000)
@@ -121,7 +151,7 @@
 @01o4l8cdefgab
 (p)`, -1);
         
-        // グローバルエラーのキャッチ
+        // Global error handlers.
         window.addEventListener('error', (e) => {
           this.logError('Error: ' + e.message + ' at ' + e.filename + ':' + e.lineno + ':' + e.colno);
         });
@@ -129,7 +159,7 @@
           this.logError('Unhandled rejection: ' + (e.reason && e.reason.stack ? e.reason.stack : e.reason));
         });
         
-        // ZMUSIC の初期化を試行
+        // Attempt to initialize ZMUSIC on mount.
         try {
           await this.initializeZMUSIC();
         } catch (error) {
@@ -137,6 +167,14 @@
         }
       }
     }).mount('#app');
+    
+    // Resume AudioContext on any user click.
+    document.addEventListener('click', async () => {
+      await initAudioContext();
+      if (window.ZMUSIC && typeof ZMUSIC.resume === 'function') {
+        await ZMUSIC.resume();
+      }
+    });
   </script>
 </body>
 </html>
