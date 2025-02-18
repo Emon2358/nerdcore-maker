@@ -3,11 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>Vue + Ace Editor + ZMUSIC Example</title>
-  <!-- プロダクション版の Vue を読み込む -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-  <!-- Ace Editor を読み込む -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.js"></script>
-  <!-- ZMUSIC ライブラリ -->
   <script src="dist/zmusic.js"></script>
   <style>
     #editor {
@@ -40,6 +37,9 @@
   </div>
   
   <script>
+    // ZMUSIC の初期化を待つ
+    let zmusicInitialized = false;
+    
     // ユーザーインタラクション後にAudioContextを再開
     document.addEventListener('click', async () => {
         if (window.ZMUSIC && typeof ZMUSIC.resume === 'function') {
@@ -61,6 +61,26 @@
           this.errorLog += message + "\n";
           console.error(message);
         },
+        async initializeZMUSIC() {
+          if (zmusicInitialized) return;
+          
+          try {
+            // AudioContext の初期化
+            await ZMUSIC.resume();
+            
+            // MIDI モードの設定
+            if (typeof ZMUSIC.setDeviceType === 'function') {
+              ZMUSIC.setDeviceType('MIDI');
+            }
+            
+            // インストール
+            await ZMUSIC.install();
+            zmusicInitialized = true;
+          } catch (error) {
+            this.logError('ZMUSIC initialization error: ' + error);
+            throw error;
+          }
+        },
         async playMusic() {
           try {
             console.log("Playボタンがクリックされました。");
@@ -68,52 +88,53 @@
             const text = this.editor.getValue();
             console.log("ZMS内容:", text);
             
+            // ZMUSIC の初期化確認
+            if (!zmusicInitialized) {
+              await this.initializeZMUSIC();
+            }
+            
+            // 再生前に AudioContext を確実に再開
             await ZMUSIC.resume();
             
-            // 初期化前の設定
-            if (ZMUSIC.setConfig) {
-                ZMUSIC.setConfig({
-                    useOPM: false,
-                    useMIDI: true
-                });
-            }
-            
-            // インストール
-            await ZMUSIC.install();
-            
-            // コンパイル結果を確認
-            try {
-                const compiled = ZMUSIC.compile(text);
-                console.log("コンパイル結果:", compiled);
-            } catch (compileError) {
-                console.error("コンパイルエラー:", compileError);
-            }
-            
-            // 再生
+            // 直接コンパイル&再生
+            console.log("音楽再生を開始します。");
             ZMUSIC.compileAndPlay(text);
             
           } catch (error) {
-            this.logError('Error: ' + error);
+            this.logError('Playback error: ' + error);
             console.error("詳細:", error);
           }
         }
       },
-      mounted() {
+      async mounted() {
         // Ace Editor の初期化
         this.editor = ace.edit("editor");
         this.editor.setTheme("ace/theme/monokai");
         this.editor.session.setMode("ace/mode/text");
         this.editor.setReadOnly(false);
-        // 初期コンテンツ：最初の行にヘッダー "ZMUSIC ZMS" を配置する
-        this.editor.setValue("ZMUSIC ZMS\n// ここに MML / ZMS の内容を記述\n", -1);
         
-        // グローバルエラーのキャッチ（オプション）
+        // 初期MIDIモードのZMSコードを設定
+        this.editor.setValue(`ZMUSIC ZMS
+(i)
+(m1,3000)
+(aM1,1)
+@01o4l8cdefgab
+(p)`, -1);
+        
+        // グローバルエラーのキャッチ
         window.addEventListener('error', (e) => {
           this.logError('Error: ' + e.message + ' at ' + e.filename + ':' + e.lineno + ':' + e.colno);
         });
         window.addEventListener('unhandledrejection', (e) => {
           this.logError('Unhandled rejection: ' + (e.reason && e.reason.stack ? e.reason.stack : e.reason));
         });
+        
+        // ZMUSIC の初期化を試行
+        try {
+          await this.initializeZMUSIC();
+        } catch (error) {
+          this.logError('Initial ZMUSIC setup failed: ' + error);
+        }
       }
     }).mount('#app');
   </script>
