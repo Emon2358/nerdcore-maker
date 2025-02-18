@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <title>Vue + Ace Editor + ZMUSIC Example</title>
-  <!-- Vue.js (Vue 3) の読み込み -->
-  <script src="https://unpkg.com/vue@3"></script>
-  <!-- Ace Editor の読み込み -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.js" integrity="sha512-bsdv4I2I7oJU3iLt0+4b0f0xkxKfygS/dh5qvyF/02Egejr3DWi1bK7LzzN5fiHJCUcmGwB5x2ufdCTIrs0alA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!-- プロダクション版の Vue を読み込む -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <!-- integrity 属性を削除して Ace Editor を読み込む -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.js"></script>
   <!-- ZMUSIC ライブラリ -->
   <script src="dist/zmusic.js"></script>
   <style>
@@ -58,11 +58,11 @@
           try {
             console.log("Playボタンがクリックされました。");
             
-            // Ace エディタからテキストを取得
+            // Aceエディタからテキストを取得
             const text = this.editor.getValue();
             console.log("Aceエディタから取得したテキスト:", text);
             
-            // テキストを ArrayBuffer に変換（zmusic.js がバイナリデータを期待している場合）
+            // テキストを ArrayBuffer に変換
             const encoder = new TextEncoder();
             const buffer = encoder.encode(text).buffer;
             
@@ -86,14 +86,6 @@
             // 再生開始
             console.log("音楽再生を開始します。");
             ZMUSIC.play(buffer);
-            
-            // 再生後、AudioContext の状態を確認（デバッグ用）
-            setTimeout(() => {
-              if (ZMUSIC.getAudioContext) {
-                const ac = ZMUSIC.getAudioContext();
-                console.log("再生後の AudioContext state:", ac.state);
-              }
-            }, 3000);
           } catch (error) {
             this.logError('Error during playing music: ' + error);
           }
@@ -105,9 +97,8 @@
         this.editor.setTheme("ace/theme/monokai");
         // 編集可能なテキストモードに設定
         this.editor.session.setMode("ace/mode/text");
-        // 明示的に編集可能に設定（デフォルトは true のはずですが念のため）
         this.editor.setReadOnly(false);
-        // 初期コンテンツの設定。-1 を指定するとカーソル位置が最初に移動しません。
+        // 初期コンテンツの設定（-1 はカーソル位置を変更しないため）
         this.editor.setValue("// ここに MML / ZMS の内容を記述\n", -1);
         
         // グローバルエラーのキャッチ（オプション）
