@@ -1,22 +1,22 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
   <head>
     <meta charset="UTF-8">
-    <title>ZMUSIC Example</title>
-    <!-- Include the ZMUSIC library -->
+    <title>ZMUSIC 再生テスト</title>
+    <!-- ZMUSIC のライブラリ読み込み -->
     <script src="dist/zmusic.js"></script>
     <script>
-      // XHR utility function to load data
+      // XHR ユーティリティ: URL から ArrayBuffer を取得する
       function xhr(url) {
-        return new Promise(function(resolve, reject) {
-          var xhr = new XMLHttpRequest();
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
           xhr.open('GET', url, true);
           xhr.responseType = 'arraybuffer';
-          xhr.addEventListener('load', function() {
+          xhr.addEventListener('load', () => {
             if (xhr.status === 200) {
               resolve(xhr.response);
             } else {
-              reject(new Error(`Failed to load ${url}: ${xhr.statusText}`));
+              reject(new Error('Failed to load ' + url));
             }
             xhr.abort();
           });
@@ -24,28 +24,22 @@
         });
       }
 
-      // When the document loads, install the ZMUSIC framework and load test data.
-      document.addEventListener('DOMContentLoaded', function() {
-        document.body.addEventListener('click', function() {
-          // Resume AudioContext on user interaction
-          if (ZMUSIC.audioContext && ZMUSIC.audioContext.state === 'suspended') {
-            ZMUSIC.audioContext.resume();
-          }
-        });
-
+      // 再生ボタンがクリックされたときに実行する処理
+      function playMusic() {
         Promise.all([
           ZMUSIC.install(),
           xhr('./test.zms')
         ]).then(results => {
           ZMUSIC.play(results[1]);
         }).catch(error => {
-          console.error("Error in Promise.all:", error);
+          console.error("エラーが発生しました:", error);
         });
-      });
+      }
     </script>
   </head>
   <body>
-    <h1>ZMUSIC Audio Test</h1>
-    <p>Click anywhere on the page to resume audio context if needed.</p>
+    <h1>ZMUSIC 再生テスト</h1>
+    <!-- 再生するボタン -->
+    <button onclick="playMusic()">再生する</button>
   </body>
 </html>
