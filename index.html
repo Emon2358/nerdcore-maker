@@ -4,14 +4,19 @@
     <!-- <script src="zmusic.asm.js"></script> -->
     <script src="dist/zmusic.js"></script>
     <script>
-      // Make XHR to support Promise.
-      function xhr (url) {
-         return new Promise(function (resolve, reject) {
+      // Promise対応のXHR関数
+      function xhr(url) {
+         return new Promise(function(resolve, reject) {
              var xhr = new XMLHttpRequest();
              xhr.open('GET', url, true);
              xhr.responseType = 'arraybuffer';
              xhr.addEventListener('load', e => {
-                 resolve(xhr.response);
+                 // 正常に読み込みが完了したかどうかをチェックする
+                 if (xhr.status >= 200 && xhr.status < 300) {
+                    resolve(xhr.response);
+                 } else {
+                    reject(new Error('Failed to load resource: status ' + xhr.status));
+                 }
                  xhr.abort();
              }, false);
              xhr.send();
@@ -20,9 +25,11 @@
 
       Promise.all([
          ZMUSIC.install(),
-         xhr('.g/test.zms')
+         xhr('.ｇ/test.zms')  // 正しいフォルダ名に修正 (.ｇ)
       ]).then(results => {
          ZMUSIC.play(results[1]);
+      }).catch(error => {
+         console.error('Error loading resource:', error);
       });
     </script>
   </head>
