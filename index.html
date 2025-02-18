@@ -10,16 +10,34 @@
 
       /**
        * Converts the MML code into text that is supported by OPM.
-       * In this updated version, we remove any hexadecimal escape
-       * sequences that match the pattern "$0b##", where "##" can be any two hexadecimal digits.
-       * We also remove any non-printable characters.
+       * This function removes any hexadecimal escape sequences matching the pattern "$0b##"
+       * and filters out non-printable characters.
+       * Additionally, it explicitly checks for problematic escapes, such as "$0b00",
+       * logs a warning, and ensures these are removed from the MML.
        *
        * @param {string} mml - The input MML code.
        * @returns {string} - The converted MML code, compatible with OPM.
        */
       function convertToOPM(mml) {
-        // Remove any occurrence of "$0b" followed by two hexadecimal digits.
-        let converted = mml.replace(/\$0b[0-9A-Fa-f]{2}/g, "");
+        // Log and remove any occurrence of "$0b00" explicitly
+        if (/\$0b00/i.test(mml)) {
+          console.warn("Detected forbidden escape sequence $0b00. Removing it from the MML code.");
+          mml = mml.replace(/\$0b00/gi, "");
+        }
+        // Replace any hexadecimal escape sequence of the form "$0b##" with its corresponding character
+        // If you wish to keep them as literal characters, you might alternatively decide to remove them – here we convert if valid.
+        let converted = mml.replace(/\$0b([0-9A-Fa-f]{2})/g, (match, hexDigits) => {
+          const num = parseInt(hexDigits, 16);
+          // As an example:
+          // If you prefer to delete escapes that translate to control characters (or to 0) completely, do so.
+          // Here, if the number equals 0 then we remove it.
+          if (num === 0) {
+            console.warn("Converted escape sequence resulted in a null character. Removing it.");
+            return "";
+          }
+          // Otherwise, convert the hex value to its corresponding character.
+          return String.fromCharCode(num);
+        });
         // Remove any non-printable characters except newline.
         converted = converted.replace(/[^\x20-\x7E\n]/g, "");
         return converted;
