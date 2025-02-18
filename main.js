@@ -2,13 +2,13 @@ const { createApp, ref, onMounted } = Vue;
 
 createApp({
   setup() {
-    // Reference to the Ace editor instance and for error messages.
+    // Reference for Ace editor instance and error messages.
     const editor = ref(null);
     const errorMsg = ref("");
 
     const defaultMml = "; Default MML code\nv12 o5 l8 cdefgab>c";
 
-    // Function to convert MML to OPM compatible text.
+    // Function to convert MML to OPM-compatible text.
     function convertToOPM(mml) {
       // Remove forbidden "$0b00" escape sequences.
       if (/\$0b00/i.test(mml)) {
@@ -17,7 +17,7 @@ createApp({
       }
       // Remove any hexadecimal escape sequence matching "$0b" followed by two hex digits.
       mml = mml.replace(/\$0b[0-9A-Fa-f]{2}/g, "");
-      // Remove non-printable characters (keep newline).
+      // Remove any non-printable characters (keep newline).
       return mml.replace(/[^\x20-\x7E\n]/g, "");
     }
 
@@ -28,8 +28,12 @@ createApp({
       if (/\$0b/.test(opmMmlCode)) {
         console.warn("Converted MML still contains $0b sequences:", opmMmlCode);
       }
-      // Call ZMUSIC.compileAndPlay with the converted code.
-      ZMUSIC.compileAndPlay(opmMmlCode)
+      // Encode converted text into an ArrayBuffer
+      const encoder = new TextEncoder();
+      const opmMmlBuffer = encoder.encode(opmMmlCode).buffer;
+      
+      // Call compileAndPlay with the ArrayBuffer instead of a string.
+      ZMUSIC.compileAndPlay(opmMmlBuffer)
         .then(() => {
           console.info("Playback started successfully.");
         })
@@ -39,21 +43,21 @@ createApp({
         });
     }
 
-    // Method to resume the audio context (useful for browsers that require user interaction).
+    // Method to resume the audio context (required on some browsers).
     function resumeAudio() {
       if (window.ZMUSIC && ZMUSIC.resume) {
         ZMUSIC.resume();
       }
     }
 
-    // Initialize Ace editor and ZMUSIC on component mount.
+    // Initialize Ace editor and ZMUSIC when the component mounts.
     onMounted(() => {
-      // Create the Ace editor in the div with id "editor".
+      // Create Ace editor in the div with id "editor".
       editor.value = ace.edit("editor");
       editor.value.setTheme("ace/theme/monokai");
-      // Use a mode that best fits your editing needs. (For plain text editing, you might use "ace/mode/text")
+      // Set editing mode (for plain text, you might use "ace/mode/text")
       editor.value.session.setMode("ace/mode/text");
-      // Set default MML in the editor.
+      // Set default MML code in the editor.
       editor.value.setValue(defaultMml, -1);
 
       // Initialize ZMUSIC.
