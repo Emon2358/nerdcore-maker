@@ -40,6 +40,13 @@
   </div>
   
   <script>
+    // ユーザーインタラクション後にAudioContextを再開
+    document.addEventListener('click', async () => {
+        if (window.ZMUSIC && typeof ZMUSIC.resume === 'function') {
+            await ZMUSIC.resume();
+        }
+    });
+
     const { createApp } = Vue;
     
     createApp({
