@@ -10,16 +10,17 @@
 
       /**
        * Converts the MML code into text that is supported by OPM.
-       * This conversion explicitly removes the problematic sequence "$0b00" 
-       * as well as non-printable characters.
-       * 
+       * In this updated version, we remove any hexadecimal escape
+       * sequences that match the pattern "$0b##", where "##" can be any two hexadecimal digits.
+       * We also remove any non-printable characters.
+       *
        * @param {string} mml - The input MML code.
        * @returns {string} - The converted MML code, compatible with OPM.
        */
       function convertToOPM(mml) {
-        // Remove occurrences of the problematic "$0b00" sequence.
-        let converted = mml.replace(/\$0b00/g, "");
-        // Remove any characters outside of the basic printable ASCII range (32-126) plus newline.
+        // Remove any occurrence of "$0b" followed by two hexadecimal digits.
+        let converted = mml.replace(/\$0b[0-9A-Fa-f]{2}/g, "");
+        // Remove any non-printable characters except newline.
         converted = converted.replace(/[^\x20-\x7E\n]/g, "");
         return converted;
       }
