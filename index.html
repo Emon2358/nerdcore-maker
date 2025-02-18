@@ -3,46 +3,64 @@
   <head>
     <meta charset="UTF-8">
     <title>ZMUSIC MML Editor</title>
+    <!-- CodeMirror CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css">
+    <!-- Add any CodeMirror themes if desired -->
+    <!-- CodeMirror JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
+    <!-- Optionally add any mode if you want syntax highlighting, for simple plaintext use this mode -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/plaintext/plaintext.min.js"></script>
     <script src="dist/zmusic.js"></script>
     <script>
+      // Global variable for the CodeMirror editor instance.
+      var editor;
+
       // Default MML code generated on the site.
       const defaultMml = "; Default MML code\nv12 o5 l8 cdefgab>c";
 
       /**
        * Converts the MML code into text that is supported by OPM.
        * This function removes any hexadecimal escape sequences matching the pattern "$0b##"
-       * and filters out non-printable characters. It explicitly checks for problematic "$0b00" 
-       * sequences, logs a warning, and then removes them.
+       * and filters out non-printable characters.
        *
        * @param {string} mml - The input MML code.
        * @returns {string} - The converted MML code, compatible with OPM.
        */
       function convertToOPM(mml) {
-        // Check and explicitly remove "$0b00"
+        // Log and remove any occurrence of "$0b00" explicitly.
         if (/\$0b00/i.test(mml)) {
           console.warn("Detected forbidden escape sequence $0b00. Removing it from the MML code.");
           mml = mml.replace(/\$0b00/gi, "");
         }
-        // Remove any hexadecimal escape sequence matching "$0b" followed by two hex digits.
+        // Remove any hexadecimal escape sequence matching "$0b" followed by any two hex digits.
         mml = mml.replace(/\$0b[0-9A-Fa-f]{2}/g, "");
         // Remove any non-printable characters except newline.
         return mml.replace(/[^\x20-\x7E\n]/g, "");
       }
 
-      // Initialize ZMUSIC and populate the textarea with converted default MML code.
-      ZMUSIC.install().then(function() {
-        let convertedMml = convertToOPM(defaultMml);
-        console.log("Converted default MML:", convertedMml);
-        document.getElementById("mml-editor").value = convertedMml;
-      }).catch(function(err) {
-        console.error("Error during ZMUSIC initialization:", err);
-        document.getElementById("error-message").textContent = "Error initializing ZMUSIC: " + err;
+      // Initialize ZMUSIC and the CodeMirror editor.
+      document.addEventListener("DOMContentLoaded", function() {
+        // Initialize CodeMirror on the textarea
+        editor = CodeMirror.fromTextArea(document.getElementById("mml-editor"), {
+          mode: "plaintext",
+          lineNumbers: true,
+          theme: "default"
+        });
+        // Install ZMUSIC and set the default MML code.
+        ZMUSIC.install().then(function() {
+          let convertedMml = convertToOPM(defaultMml);
+          console.log("Converted default MML:", convertedMml);
+          editor.setValue(convertedMml);
+        }).catch(function(err) {
+          console.error("Error during ZMUSIC initialization:", err);
+          document.getElementById("error-message").textContent = "Error initializing ZMUSIC: " + err;
+        });
       });
 
-      // Function to play the MML code from the textarea.
+      // Function to play the MML code from the CodeMirror editor.
       function playMml() {
-        // Get the user input from the editor.
-        const mmlCode = document.getElementById("mml-editor").value;
+        // Get the user input from the CodeMirror editor.
+        const mmlCode = editor.getValue();
         // Convert the MML code to be OPM-compatible.
         const opmMmlCode = convertToOPM(mmlCode);
         // Log for debugging: check if any "$0b" sequences remain.
@@ -52,11 +70,21 @@
         ZMUSIC.compileAndPlay(opmMmlCode);
       }
     </script>
+    <style>
+      /* Optional: Set dimensions for the CodeMirror editor */
+      .CodeMirror {
+        height: auto;
+        border: 1px solid #ddd;
+        font-size: 14px;
+      }
+    </style>
   </head>
   <body>
     <h1>ZMUSIC MML Editor</h1>
+    <!-- Display error messages if any occur -->
     <div id="error-message" style="color: red;"></div>
-    <textarea id="mml-editor" rows="15" cols="60"></textarea>
+    <!-- The textarea that will be converted into a CodeMirror editor -->
+    <textarea id="mml-editor"></textarea>
     <br>
     <button onclick="playMml()">Play</button>
     <button onclick="ZMUSIC.resume()">Unmute</button>
