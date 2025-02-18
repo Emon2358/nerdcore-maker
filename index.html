@@ -1,86 +1,28 @@
-<!DOCTYPE html>
 <html>
   <head>
-    <meta charset="UTF-8">
-    <title>Nerdcore Maker - ZMUSIC Player</title>
-    <!-- Include the ZMUSIC library -->
-    <script src="dist/zmusic.js"></script>
+    <!-- <script src="zmusic.asm.js"></script> -->
+    <script src="zmusic.js"></script>
     <script>
-      // Function to make an XHR request that supports Promises.
-      function xhr(url) {
-         return new Promise(function(resolve, reject) {
+      // Make XHR to support Promise.
+      function xhr (url) {
+         return new Promise(function (resolve, reject) {
              var xhr = new XMLHttpRequest();
              xhr.open('GET', url, true);
              xhr.responseType = 'arraybuffer';
-             xhr.addEventListener('load', () => {
-                 if (xhr.status >= 200 && xhr.status < 300) {
-                    resolve(xhr.response);
-                 } else {
-                    reject(new Error('Failed to load resource: status ' + xhr.status));
-                 }
+             xhr.addEventListener('load', e => {
+                 resolve(xhr.response);
                  xhr.abort();
              }, false);
              xhr.send();
          });
       }
 
-      // Variable to store the loaded music data.
-      let musicData = null;
-
-      // Function to initialize ZMUSIC and load the music file.
-      function initMusic() {
-          Promise.all([
-             // Ensure ZMUSIC is installed before playing.
-             ZMUSIC.install(),
-             // Adjusted file path to use the correct fullwidth "ｇ" directory.
-             xhr('.ｇ/test.zms')
-          ]).then(results => {
-             musicData = results[1];
-             // Automatically play music after successful loading.
-             ZMUSIC.play(musicData);
-          }).catch(error => {
-             console.error('Error loading resource:', error);
-          });
-      }
-
-      // Function to play the loaded music.
-      function playMusic() {
-          if (musicData) {
-              ZMUSIC.play(musicData);
-          } else {
-              console.warn("Music data is not loaded yet.");
-          }
-      }
-
-      // Function to stop the music.
-      function stopMusic() {
-          if (typeof ZMUSIC.stop === "function") {
-              ZMUSIC.stop();
-          } else {
-              console.warn("Stop function is not available in ZMUSIC.");
-          }
-      }
-
-      // Initialize music when the page loads.
-      window.addEventListener('DOMContentLoaded', initMusic);
+      Promise.all([
+         ZMUSIC.install(),
+         xhr('./test.zms')
+      ]).then(results => {
+         ZMUSIC.play(results[1]);
+      });
     </script>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        text-align: center;
-        margin-top: 50px;
-      }
-      button {
-        font-size: 16px;
-        padding: 10px 20px;
-        margin: 5px;
-      }
-    </style>
   </head>
-  <body>
-    <h1>Nerdcore Maker - ZMUSIC Player</h1>
-    <p>Use the buttons below to control the music.</p>
-    <button onclick="playMusic()">Play</button>
-    <button onclick="stopMusic()">Stop</button>
-  </body>
 </html>
