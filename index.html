@@ -12,74 +12,109 @@
         var outputElement = document.getElementById("console-output");
         if (outputElement) {
           outputElement.textContent += text + "\n";
+          // 自動スクロール
+          outputElement.scrollTop = outputElement.scrollHeight;
         } else {
           console.log(text);
         }
       }
 
       var editor;
-      // ZMUSICフォーマットに合わせた初期MML
-      const defaultMml = `; Modified MML code
-t150
+      const defaultMml = `t150
 @1 v116 o5 q6
 c<b>cec>b<c> c<c>b-<cec>b-<c>
 c<a>cec>a<c> c<c>a-<cec>a-<c>`;
 
-      function convertMml(mml) {
-        // 特殊な制御文字とコマンドの変換
-        let converted = mml
-          // (i)を削除
-          .replace(/\(i\)/g, '')
-          // (o数字)をt数字に変換
-          .replace(/\(o(\d+)\)/g, 't$1')
-          // (t数字)をトラック指定を削除
-          .replace(/\(t\d+\)/g, '')
-          // (m数字,数字)を削除
-          .replace(/\(m\d+,\d+\)/g, '')
-          // (afm数字,数字)を削除
-          .replace(/\(afm\d+,\d+\)/g, '')
-          // @v数字を v数字に変換
-          .replace(/@v(\d+)/g, 'v$1')
-          // [do]を削除
-          .replace(/\[do\]/g, '')
-          // loopを削除
-          .replace(/loop/g, '')
-          // (p)を削除
-          .replace(/\(p\)/g, '')
-          // 複数の空行を1つにまとめる
-          .replace(/\n\s*\n/g, '\n')
-          // 行頭と行末の空白を削除
-          .replace(/^\s+|\s+$/gm, '');
-
-        return converted;
+      function processString(str) {
+        // UTF-8エンコードされた文字列に変換
+        const encoder = new TextEncoder();
+        const decoder = new TextDecoder('utf-8');
+        
+        // 文字列をUTF-8バイト配列に変換し、再度文字列に戻す
+        return decoder.decode(encoder.encode(str));
       }
 
-      document.addEventListener("DOMContentLoaded", function() {
+      function convertMml(mml) {
+        // 基本的なクリーニング
+        let converted = mml
+          .replace(/\(i\)/g, '')
+          .replace(/\(o(\d+)\)/g, 't$1')
+          .replace(/\(t\d+\)/g, '')
+          .replace(/\(m\d+,\d+\)/g, '')
+          .replace(/\(afm\d+,\d+\)/g, '')
+          .replace(/@v(\d+)/g, 'v$1')
+          .replace(/\[do\]/g, '')
+          .replace(/loop/g, '')
+          .replace(/\(p\)/g, '')
+          // 制御文字を削除
+          .replace(/[\x00-\x1F\x7F]/g, '')
+          // 空白行の正規化
+          .replace(/\n\s*\n/g, '\n')
+          .trim();
+
+        // UTF-8エンコーディング処理を適用
+        return processString(converted);
+      }
+
+      function initializeEditor() {
         editor = CodeMirror.fromTextArea(document.getElementById("mml-editor"), {
           mode: "plaintext",
           lineNumbers: true,
           theme: "default",
-          viewportMargin: Infinity
+          viewportMargin: Infinity,
+          lineWrapping: true
         });
 
-        ZMUSIC.install().then(function() {
-          const convertedMml = convertMml(defaultMml);
-          editor.setValue(convertedMml);
-        }).catch(function(err) {
-          console.error("Error during ZMUSIC initialization:", err);
+        return ZMUSIC.install()
+          .then(() => {
+            const convertedMml = convertMml(defaultMml);
+            editor.setValue(convertedMml);
+            console.log("Initialization successful");
+          })
+          .catch(err => {
+            console.error("Initialization error:", err);
+            throw err;
+          });
+      }
+
+      document.addEventListener("DOMContentLoaded", function() {
+        initializeEditor().catch(err => {
           document.getElementById("error-message").textContent = "Error initializing ZMUSIC: " + err;
         });
       });
 
       function playMml() {
+        const errorElement = document.getElementById("error-message");
+        errorElement.textContent = ""; // エラーメッセージをクリア
+        
         try {
           const mmlCode = editor.getValue();
+          if (!mmlCode.trim()) {
+            throw new Error("MML code is empty");
+          }
+
           const convertedMml = convertMml(mmlCode);
-          console.log("Playing converted MML:", convertedMml);
-          ZMUSIC.compileAndPlay(convertedMml);
+          console.log("Playing MML:", convertedMml);
+          
+          // メモリリークを防ぐため、再生前に停止
+          if (typeof ZMUSIC.stop === 'function') {
+            ZMUSIC.stop();
+          }
+
+          // 100ms待ってから再生
+          setTimeout(() => {
+            ZMUSIC.compileAndPlay(convertedMml);
+          }, 100);
+
         } catch (err) {
-          console.error("Error playing MML:", err);
-          document.getElementById("error-message").textContent = "Error playing MML: " + err;
+          console.error("Playback error:", err);
+          errorElement.textContent = "Error playing MML: " + err.message;
+        }
+      }
+
+      function stopPlayback() {
+        if (typeof ZMUSIC.stop === 'function') {
+          ZMUSIC.stop();
         }
       }
     </script>
@@ -95,6 +130,7 @@ c<a>cec>a<c> c<c>a-<cec>a-<c>`;
         border: 1px solid #ddd;
         font-size: 14px;
         margin-bottom: 10px;
+        min-height: 200px;
       }
       #console-output {
         margin-top: 20px;
@@ -113,9 +149,15 @@ c<a>cec>a<c> c<c>a-<cec>a-<c>`;
       }
       #error-message {
         color: red;
-        margin-bottom: 10px;
-        white-space: pre-wrap;
-        font-family: monospace;
+        margin: 10px 0;
+        padding: 10px;
+        background-color: #fff3f3;
+        border: 1px solid #ffcdd2;
+        border-radius: 4px;
+        display: none;
+      }
+      #error-message:not(:empty) {
+        display: block;
       }
     </style>
   </head>
@@ -126,6 +168,7 @@ c<a>cec>a<c> c<c>a-<cec>a-<c>`;
     <br>
     <button onclick="playMml()">Play</button>
     <button onclick="ZMUSIC.resume()">Unmute</button>
+    <button onclick="stopPlayback()">Stop</button>
     <pre id="console-output"></pre>
   </body>
 </html>
