@@ -3,48 +3,48 @@
   <head>
     <meta charset="UTF-8">
     <title>ZMUSIC 再生テスト</title>
-    <!-- ZMUSIC のライブラリ読み込み -->
+    <!-- ZMUSIC ライブラリの読み込み -->
     <script src="dist/zmusic.js"></script>
     <script>
-      // XHR ユーティリティ: URL から ArrayBuffer を取得する
-      function xhr(url) {
-        return new Promise((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open('GET', url, true);
-          xhr.responseType = 'arraybuffer';
-          xhr.addEventListener('load', () => {
-            if (xhr.status === 200) {
-              resolve(xhr.response);
-            } else {
-              reject(new Error('Failed to load ' + url));
-            }
-            xhr.abort();
-          });
-          xhr.send();
-        });
+      // fetch を使って URL から ArrayBuffer を取得するユーティリティ関数
+      async function fetchArrayBuffer(url) {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`${url} の取得に失敗しました。ステータス: ${response.status}`);
+        }
+        return await response.arrayBuffer();
       }
 
-      // 再生ボタンがクリックされたときに実行する処理
+      // 再生ボタンがクリックされたときに実行する関数
       async function playMusic() {
-        // ユーザー操作で AudioContext を再開
-        if (window.ZMUSIC && ZMUSIC && ZMUSIC.resume) {
-          ZMUSIC.resume();
-        }
         try {
-          const [_, zms] = await Promise.all([
-            ZMUSIC.install(),
-            xhr('./test.zms')
-          ]);
-          ZMUSIC.play(zms);
-        } catch (e) {
-          console.error("エラーが発生しました:", e);
+          // ユーザーの操作が必要なブラウザ（特にモバイルなど）では、
+          // AudioContext の resume() を呼び出す必要があります。
+          if (window.ZMUSIC && typeof ZMUSIC.resume === 'function') {
+            await ZMUSIC.resume();
+          }
+
+          // ZMUSIC の初期化とテストデータのロード
+          await ZMUSIC.install();
+          const zmsData = await fetchArrayBuffer('./test.zms');
+
+          // ZMUSIC.play() を呼び出して再生を開始します
+          ZMUSIC.play(zmsData);
+        } catch (err) {
+          console.error("再生エラー:", err);
         }
       }
+
+      // DOMContentLoaded で再生ボタンにイベントリスナーを登録
+      document.addEventListener('DOMContentLoaded', () => {
+        const playButton = document.getElementById('playButton');
+        playButton.addEventListener('click', playMusic);
+      });
     </script>
   </head>
   <body>
     <h1>ZMUSIC 再生テスト</h1>
-    <!-- 再生するボタン -->
-    <button onclick="playMusic()">再生する</button>
+    <p>「再生する」ボタンをクリックして音楽を再生します。</p>
+    <button id="playButton">再生する</button>
   </body>
 </html>
