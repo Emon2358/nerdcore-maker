@@ -57,7 +57,7 @@
         async playMusic() {
           try {
             console.log("Playボタンがクリックされました。");
-
+            
             // Ace エディタからテキストを取得
             const text = this.editor.getValue();
             console.log("Aceエディタから取得したテキスト:", text);
@@ -86,6 +86,14 @@
             // 再生開始
             console.log("音楽再生を開始します。");
             ZMUSIC.play(buffer);
+            
+            // 再生後、AudioContext の状態を確認（デバッグ用）
+            setTimeout(() => {
+              if (ZMUSIC.getAudioContext) {
+                const ac = ZMUSIC.getAudioContext();
+                console.log("再生後の AudioContext state:", ac.state);
+              }
+            }, 3000);
           } catch (error) {
             this.logError('Error during playing music: ' + error);
           }
@@ -95,10 +103,12 @@
         // Ace Editor の初期化
         this.editor = ace.edit("editor");
         this.editor.setTheme("ace/theme/monokai");
-        // エディタのモードは用途に合わせて変更（ここでは JavaScript モード）
-        this.editor.session.setMode("ace/mode/javascript");
-        // 初期コンテンツの設定（必要に応じて MML や ZMS のサンプルを記述）
-        this.editor.setValue("// ここに MML / ZMS の内容を記述\n");
+        // 編集可能なテキストモードに設定
+        this.editor.session.setMode("ace/mode/text");
+        // 明示的に編集可能に設定（デフォルトは true のはずですが念のため）
+        this.editor.setReadOnly(false);
+        // 初期コンテンツの設定。-1 を指定するとカーソル位置が最初に移動しません。
+        this.editor.setValue("// ここに MML / ZMS の内容を記述\n", -1);
         
         // グローバルエラーのキャッチ（オプション）
         window.addEventListener('error', (e) => {
