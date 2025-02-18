@@ -33,7 +33,7 @@
   <script>
     // エラーログを画面に出力するヘルパー関数
     function logError(message) {
-      var errorLog = document.getElementById('errorLog');
+      const errorLog = document.getElementById('errorLog');
       if (errorLog) {
         errorLog.textContent += message + "\n";
       }
@@ -41,7 +41,7 @@
 
     // console.error を上書きして、エラーをページ上にも表示する
     (function() {
-      var oldError = console.error;
+      const oldError = console.error;
       console.error = function(...args) {
         oldError.apply(console, args);
         logError(args.join(' '));
@@ -58,45 +58,35 @@
       logError('Unhandled rejection: ' + (e.reason && e.reason.stack ? e.reason.stack : e.reason));
     });
 
-    // ヘルパー関数: XHRリクエストでバイナリデータを取得
-    function xhr(url) {
-      return new Promise(function(resolve, reject) {
-        var req = new XMLHttpRequest();
-        req.open('GET', url, true);
-        req.responseType = 'arraybuffer';
-        req.onload = function() {
-          if (req.status >= 200 && req.status < 300) {
-            resolve(req.response);
-          } else {
-            var errorMsg = 'Failed to load ' + url + ': status ' + req.status;
-            reject(new Error(errorMsg));
-          }
-        };
-        req.onerror = function() {
-          var errorMsg = 'Network error while trying to load ' + url;
-          reject(new Error(errorMsg));
-        };
-        req.send();
-      });
+    // fetch API を使ってバイナリデータを取得するヘルパー関数
+    async function fetchBinary(url) {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Failed to load ' + url + ': status ' + response.status);
+      }
+      return response.arrayBuffer();
+    }
+
+    // AudioWorkletNode のサポート状況をチェック（サポートされていなければ警告）
+    if (!window.AudioWorkletNode) {
+      console.warn('AudioWorkletNode is not supported in this browser. Falling back to ScriptProcessorNode, which is deprecated.');
     }
 
     // ボタンのクリックでオーディオ再生処理を開始する
-    document.getElementById('playButton').addEventListener('click', function() {
-      // ユーザー操作後に AudioContext を再開または生成する
-      if (ZMUSIC && typeof ZMUSIC.resume === 'function') {
-        ZMUSIC.resume();
-      }
+    document.getElementById('playButton').addEventListener('click', async function() {
+      try {
+        // ユーザー操作後に AudioContext を再開または生成する（ライブラリにより異なります）
+        if (window.ZMUSIC && typeof ZMUSIC.resume === 'function') {
+          ZMUSIC.resume();
+        }
 
-      // zpd は省略して、zmdのみ読み込み＆再生する
-      xhr('data/bgm1.zmd')
-        .then(zmd => {
-          ZMUSIC.install().then(() => {
-            ZMUSIC.play(zmd);
-          });
-        })
-        .catch(error => {
-          console.error('Error during loading or playing music:', error);
-        });
+        // ※ 404エラーが発生している場合、ここで指定している 'data/bgm1.zmd' のパスを再確認してください
+        const zmdData = await fetchBinary('data/bgm1.zmd');
+        await ZMUSIC.install();
+        ZMUSIC.play(zmdData);
+      } catch (error) {
+        console.error('Error during loading or playing music:', error);
+      }
     });
   </script>
 </body>
