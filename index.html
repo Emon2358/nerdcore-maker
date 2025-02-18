@@ -11,65 +11,53 @@
       /**
        * Converts the MML code into text that is supported by OPM.
        * This function removes any hexadecimal escape sequences matching the pattern "$0b##"
-       * and filters out non-printable characters.
-       * Additionally, it explicitly checks for problematic escapes, such as "$0b00",
-       * logs a warning, and ensures these are removed from the MML.
+       * and filters out non-printable characters. It explicitly checks for problematic "$0b00" 
+       * sequences, logs a warning, and then removes them.
        *
        * @param {string} mml - The input MML code.
        * @returns {string} - The converted MML code, compatible with OPM.
        */
       function convertToOPM(mml) {
-        // Log and remove any occurrence of "$0b00" explicitly
+        // Check and explicitly remove "$0b00"
         if (/\$0b00/i.test(mml)) {
           console.warn("Detected forbidden escape sequence $0b00. Removing it from the MML code.");
           mml = mml.replace(/\$0b00/gi, "");
         }
-        // Replace any hexadecimal escape sequence of the form "$0b##" with its corresponding character
-        // If you wish to keep them as literal characters, you might alternatively decide to remove them – here we convert if valid.
-        let converted = mml.replace(/\$0b([0-9A-Fa-f]{2})/g, (match, hexDigits) => {
-          const num = parseInt(hexDigits, 16);
-          // As an example:
-          // If you prefer to delete escapes that translate to control characters (or to 0) completely, do so.
-          // Here, if the number equals 0 then we remove it.
-          if (num === 0) {
-            console.warn("Converted escape sequence resulted in a null character. Removing it.");
-            return "";
-          }
-          // Otherwise, convert the hex value to its corresponding character.
-          return String.fromCharCode(num);
-        });
+        // Remove any hexadecimal escape sequence matching "$0b" followed by two hex digits.
+        mml = mml.replace(/\$0b[0-9A-Fa-f]{2}/g, "");
         // Remove any non-printable characters except newline.
-        converted = converted.replace(/[^\x20-\x7E\n]/g, "");
-        return converted;
+        return mml.replace(/[^\x20-\x7E\n]/g, "");
       }
 
-      // Initialize ZMUSIC and set the textarea with the converted default MML code.
+      // Initialize ZMUSIC and populate the textarea with converted default MML code.
       ZMUSIC.install().then(function() {
-        document.getElementById("mml-editor").value = convertToOPM(defaultMml);
+        let convertedMml = convertToOPM(defaultMml);
+        console.log("Converted default MML:", convertedMml);
+        document.getElementById("mml-editor").value = convertedMml;
       }).catch(function(err) {
         console.error("Error during ZMUSIC initialization:", err);
-        const errorDiv = document.getElementById("error-message");
-        errorDiv.textContent = "Error initializing ZMUSIC: " + err;
+        document.getElementById("error-message").textContent = "Error initializing ZMUSIC: " + err;
       });
 
       // Function to play the MML code from the textarea.
       function playMml() {
         // Get the user input from the editor.
         const mmlCode = document.getElementById("mml-editor").value;
-        // Convert the MML code to be OPM-compatible before sending it to ZMUSIC.
+        // Convert the MML code to be OPM-compatible.
         const opmMmlCode = convertToOPM(mmlCode);
+        // Log for debugging: check if any "$0b" sequences remain.
+        if (/\$0b/.test(opmMmlCode)) {
+          console.warn("Converted MML still contains $0b sequences:", opmMmlCode);
+        }
         ZMUSIC.compileAndPlay(opmMmlCode);
       }
     </script>
   </head>
   <body>
     <h1>ZMUSIC MML Editor</h1>
-    <!-- Display error messages if any occur -->
     <div id="error-message" style="color: red;"></div>
-    <!-- Textarea for MML code editing -->
     <textarea id="mml-editor" rows="15" cols="60"></textarea>
     <br>
-    <!-- Buttons to play MML and unmute audio -->
     <button onclick="playMml()">Play</button>
     <button onclick="ZMUSIC.resume()">Unmute</button>
   </body>
