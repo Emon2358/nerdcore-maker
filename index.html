@@ -18,18 +18,40 @@
       }
 
       var editor;
-      const defaultMml = "; Default MML code\nv12 o5 l8 cdefgab>c";
+      // ZMUSICフォーマットに合わせた初期MML
+      const defaultMml = `; Modified MML code
+t150
+@1 v116 o5 q6
+c<b>cec>b<c> c<c>b-<cec>b-<c>
+c<a>cec>a<c> c<c>a-<cec>a-<c>`;
 
-      function sanitizeMml(mml) {
-        // 文字列の終わりを示す特殊文字を削除
-        mml = mml.replace(/\0/g, '');
-        // 非表示文字を削除（改行は除く）
-        mml = mml.replace(/[^\x20-\x7E\n]/g, '');
-        // 行末の空白を削除
-        mml = mml.replace(/[ \t]+$/gm, '');
-        // 複数の空行を1つにまとめる
-        mml = mml.replace(/\n\s*\n/g, '\n');
-        return mml;
+      function convertMml(mml) {
+        // 特殊な制御文字とコマンドの変換
+        let converted = mml
+          // (i)を削除
+          .replace(/\(i\)/g, '')
+          // (o数字)をt数字に変換
+          .replace(/\(o(\d+)\)/g, 't$1')
+          // (t数字)をトラック指定を削除
+          .replace(/\(t\d+\)/g, '')
+          // (m数字,数字)を削除
+          .replace(/\(m\d+,\d+\)/g, '')
+          // (afm数字,数字)を削除
+          .replace(/\(afm\d+,\d+\)/g, '')
+          // @v数字を v数字に変換
+          .replace(/@v(\d+)/g, 'v$1')
+          // [do]を削除
+          .replace(/\[do\]/g, '')
+          // loopを削除
+          .replace(/loop/g, '')
+          // (p)を削除
+          .replace(/\(p\)/g, '')
+          // 複数の空行を1つにまとめる
+          .replace(/\n\s*\n/g, '\n')
+          // 行頭と行末の空白を削除
+          .replace(/^\s+|\s+$/gm, '');
+
+        return converted;
       }
 
       document.addEventListener("DOMContentLoaded", function() {
@@ -41,8 +63,8 @@
         });
 
         ZMUSIC.install().then(function() {
-          const sanitizedMml = sanitizeMml(defaultMml);
-          editor.setValue(sanitizedMml);
+          const convertedMml = convertMml(defaultMml);
+          editor.setValue(convertedMml);
         }).catch(function(err) {
           console.error("Error during ZMUSIC initialization:", err);
           document.getElementById("error-message").textContent = "Error initializing ZMUSIC: " + err;
@@ -52,9 +74,9 @@
       function playMml() {
         try {
           const mmlCode = editor.getValue();
-          const sanitizedMml = sanitizeMml(mmlCode);
-          console.log("Playing sanitized MML:", sanitizedMml);
-          ZMUSIC.compileAndPlay(sanitizedMml);
+          const convertedMml = convertMml(mmlCode);
+          console.log("Playing converted MML:", convertedMml);
+          ZMUSIC.compileAndPlay(convertedMml);
         } catch (err) {
           console.error("Error playing MML:", err);
           document.getElementById("error-message").textContent = "Error playing MML: " + err;
@@ -89,11 +111,17 @@
         margin-right: 10px;
         cursor: pointer;
       }
+      #error-message {
+        color: red;
+        margin-bottom: 10px;
+        white-space: pre-wrap;
+        font-family: monospace;
+      }
     </style>
   </head>
   <body>
     <h1>ZMUSIC MML Editor</h1>
-    <div id="error-message" style="color: red; margin-bottom: 10px;"></div>
+    <div id="error-message"></div>
     <textarea id="mml-editor"></textarea>
     <br>
     <button onclick="playMml()">Play</button>
