@@ -9,18 +9,22 @@
       const defaultMml = "; Default MML code\nv12 o5 l8 cdefgab>c";
 
       /**
-       * Converts the MML code to use only characters supported by OPM.
-       * In this example, we simply remove any characters outside the basic ASCII range 
-       * (0x20-0x7E plus newline). Adjust this function if you need more sophisticated mapping.
-       *
+       * Converts the MML code into text that is supported by OPM.
+       * This conversion explicitly removes the problematic sequence "$0b00" 
+       * as well as non-printable characters.
+       * 
        * @param {string} mml - The input MML code.
-       * @returns {string} - The converted MML code compatible with OPM.
+       * @returns {string} - The converted MML code, compatible with OPM.
        */
       function convertToOPM(mml) {
-        return mml.replace(/[^\x20-\x7E\n]/g, '');
+        // Remove occurrences of the problematic "$0b00" sequence.
+        let converted = mml.replace(/\$0b00/g, "");
+        // Remove any characters outside of the basic printable ASCII range (32-126) plus newline.
+        converted = converted.replace(/[^\x20-\x7E\n]/g, "");
+        return converted;
       }
 
-      // Initialize ZMUSIC and set the textarea with default MML code converted for OPM.
+      // Initialize ZMUSIC and set the textarea with the converted default MML code.
       ZMUSIC.install().then(function() {
         document.getElementById("mml-editor").value = convertToOPM(defaultMml);
       }).catch(function(err) {
@@ -33,7 +37,7 @@
       function playMml() {
         // Get the user input from the editor.
         const mmlCode = document.getElementById("mml-editor").value;
-        // Convert the MML code to be OPM compatible before sending it to ZMUSIC.
+        // Convert the MML code to be OPM-compatible before sending it to ZMUSIC.
         const opmMmlCode = convertToOPM(mmlCode);
         ZMUSIC.compileAndPlay(opmMmlCode);
       }
