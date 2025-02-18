@@ -10,7 +10,7 @@
         return new Promise(function(resolve, reject) {
           var xhr = new XMLHttpRequest();
           xhr.open('GET', url, true);
-          // Since MML code is in plain text, set the responseType to 'text'
+          // Since MML code is in plain text, set responseType to 'text'
           xhr.responseType = 'text';
           xhr.onload = function() {
             if (xhr.status === 200) {
@@ -25,23 +25,28 @@
           xhr.send();
         });
       }
-
-      // Global variable to hold the default MML code.
+      
+      // Global variable to hold the MML code.
       var defaultMml = "";
-
-      // Install ZMUSIC and load the default MML code.
+      
+      // Initialize ZMUSIC and load the default MML code.
       Promise.all([
         ZMUSIC.install(),
         xhr('data/bgm1.zms')
       ]).then(function(results) {
         defaultMml = results[1];
-        // Insert the default MML code into the textarea.
         document.getElementById("mml-editor").value = defaultMml;
       }).catch(function(err) {
         console.error("Error during initialization:", err);
+        // Use fallback default MML code on error.
+        defaultMml = "; Default MML code\nv12 o5 l8 cdefgab>c";
+        document.getElementById("mml-editor").value = defaultMml;
+        // Display error message to the user.
+        var errorDiv = document.getElementById("error-message");
+        errorDiv.textContent = "エラー: bgm1.zmsが読み込めませんでした。デフォルトのMMLコードを使用しています。";
       });
-
-      // Function to retrieve the MML code from the textarea and play it.
+      
+      // Function to play the MML code from the textarea.
       function playMml() {
         var mmlCode = document.getElementById("mml-editor").value;
         ZMUSIC.compileAndPlay(mmlCode);
@@ -50,12 +55,13 @@
   </head>
   <body>
     <h1>ZMUSIC MML Editor</h1>
-    <!-- Text area for writing or modifying MML code -->
+    <!-- Display error messages if any occur -->
+    <div id="error-message" style="color: red;"></div>
+    <!-- Textarea for MML code editing -->
     <textarea id="mml-editor" rows="15" cols="60"></textarea>
     <br>
-    <!-- Play the MML code -->
+    <!-- Buttons to play MML and unmute audio -->
     <button onclick="playMml()">Play</button>
-    <!-- Unmute button if required -->
     <button onclick="ZMUSIC.resume()">Unmute</button>
   </body>
 </html>
