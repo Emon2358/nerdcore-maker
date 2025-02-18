@@ -535,13 +535,14 @@ ZMUSIC = {
   }
 };
 
-/* Remove the invalid token "[...]" which was causing a syntax error.
-   If Module.expectedData is required, initialize it properly here. */
-var Module = typeof Module !== "undefined" ? Module : {};
+// Initialize additional Module properties if not already present.
+if (typeof Module === "undefined") {
+  Module = {};
+}
 if (!Module.expectedDataFileDownloads) {
   Module.expectedDataFileDownloads = 0;
 }
-// Uncomment or initialize Module.expectedData as needed.
+// Module.expectedData can be initialized as needed.
 // Module.expectedData = [];
-  
+
 })();
