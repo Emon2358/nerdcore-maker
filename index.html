@@ -65,32 +65,36 @@
           try {
             console.log("Playボタンがクリックされました。");
             
-            // Aceエディタからテキストを取得
             const text = this.editor.getValue();
-            console.log("Aceエディタから取得したテキスト:", text);
+            console.log("ZMS内容:", text);
             
-            // AudioContext の再開
-            if (window.ZMUSIC && typeof ZMUSIC.resume === 'function') {
-              await ZMUSIC.resume();
-              console.log("ZMUSIC.resume() により AudioContext を再開しました。");
+            await ZMUSIC.resume();
+            
+            // 初期化前の設定
+            if (ZMUSIC.setConfig) {
+                ZMUSIC.setConfig({
+                    useOPM: false,
+                    useMIDI: true
+                });
             }
             
-            // AudioWorkletNode 利用の設定（ZMUSIC 側で対応している場合）
-            if (window.AudioWorkletNode && ZMUSIC.setUseAudioWorklet) {
-              ZMUSIC.setUseAudioWorklet(true);
-              console.log("AudioWorkletNode を使用するように設定しました。");
+            // インストール
+            await ZMUSIC.install();
+            
+            // コンパイル結果を確認
+            try {
+                const compiled = ZMUSIC.compile(text);
+                console.log("コンパイル結果:", compiled);
+            } catch (compileError) {
+                console.error("コンパイルエラー:", compileError);
             }
             
-            // ZMUSIC のインストールと MML のコンパイル＆再生
-            console.log("ZMUSIC をインストール中…");
-            await ZMUSIC.install().then(() => {
-              console.log("ZMUSIC のインストールが完了しました。");
-              console.log("音楽再生を開始します。");
-              ZMUSIC.compileAndPlay(text);
-            });
+            // 再生
+            ZMUSIC.compileAndPlay(text);
             
           } catch (error) {
-            this.logError('Error during playing music: ' + error);
+            this.logError('Error: ' + error);
+            console.error("詳細:", error);
           }
         }
       },
