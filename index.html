@@ -1,68 +1,27 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <title>Nerdcore Maker</title>
-  <!-- Load Vue.js -->
-  <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
-  <!-- Load Ace Editor -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.js"></script>
-  <!-- Load zmusic.js -->
-  <script src="dist/zmusic.js"></script>
-  <style>
-    /* Style for the Ace editor container */
-    #editor {
-      height: 300px;
-      width: 100%;
-      border: 1px solid #ccc;
-    }
-    body {
-      font-family: sans-serif;
-      margin: 20px;
-    }
-    button {
-      margin-top: 10px;
-      padding: 5px 10px;
-      font-size: 1rem;
-    }
-  </style>
-</head>
-<body>
-  <div id="app">
-    <h1>Nerdcore Maker</h1>
-    <!-- Ace editor will be mounted on this div -->
-    <div id="editor"></div>
-    <br>
-    <!-- Click button to send editor content to zmusic.js for playback -->
-    <button @click="playMusic">再生</button>
-  </div>
-
-  <script>
-    new Vue({
-      el: '#app',
-      data: {
-        editor: null,
-      },
-      mounted() {
-        // Initialize Ace editor on the #editor div
-        this.editor = ace.edit("editor");
-        this.editor.setTheme("ace/theme/monokai");
-        // Set the language mode to JavaScript (you can change this if needed)
-        this.editor.session.setMode("ace/mode/javascript");
-      },
-      methods: {
-        playMusic() {
-          // Retrieve the current content from Ace editor
-          const code = this.editor.getValue();
-          // Call the playMusic function from zmusic.js and pass the code
-          if (typeof playMusic === 'function') {
-            playMusic(code);
-          } else {
-            console.error("playMusic function is not defined in zmusic.js");
-          }
-        }
+  <head>
+    <meta charset="UTF-8">
+    <title>ZMUSIC MML Editor (Vue + Ace)</title>
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Ace Editor CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.11.1/ace.js"></script>
+    <!-- Include zmusic.js -->
+    <script src="dist/zmusic.js"></script>
+    <style>
+      /* Basic styling for the Ace editor container */
+      #editor {
+        height: 300px;
+        width: 600px;
+        border: 1px solid #ddd;
       }
-    });
-  </script>
-</body>
+    </style>
+  </head>
+  <body>
+    <!-- Vue will mount the app in this container -->
+    <div id="app"></div>
+    <!-- Main JS file -->
+    <script src="main.js"></script>
+  </body>
 </html>
