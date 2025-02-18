@@ -17,22 +17,51 @@ createApp({
       }
       // Remove any hexadecimal escape sequence matching "$0b" followed by two hex digits.
       mml = mml.replace(/\$0b[0-9A-Fa-f]{2}/g, "");
-      // Remove any non-printable characters (keep newline).
+      // Remove non-printable characters (keep newline).
       return mml.replace(/[^\x20-\x7E\n]/g, "");
+    }
+
+    // Function to post-process the ArrayBuffer to remove any forbidden "$0b00" byte sequence.
+    function removeForbiddenSequence(buffer) {
+      const arr = new Uint8Array(buffer);
+      // "$0b00" in ASCII: $, 0, b, 0, 0 -> [36, 48, 98, 48, 48]
+      const forbidden = [36, 48, 98, 48, 48];
+      let result = [];
+      for (let i = 0; i < arr.length; ) {
+        let isForbid = true;
+        for (let j = 0; j < forbidden.length && i + j < arr.length; j++) {
+          if (arr[i + j] !== forbidden[j]) {
+            isForbid = false;
+            break;
+          }
+        }
+        if (isForbid) {
+          // Skip forbidden sequence.
+          console.warn("Removing forbidden byte sequence: $0b00");
+          i += forbidden.length;
+        } else {
+          result.push(arr[i]);
+          i++;
+        }
+      }
+      return new Uint8Array(result).buffer;
     }
 
     // Method to trigger ZMUSIC.playback using the content from Ace.
     function playMml() {
       const mmlCode = editor.value.getValue();
-      const opmMmlCode = convertToOPM(mmlCode);
-      if (/\$0b/.test(opmMmlCode)) {
-        console.warn("Converted MML still contains $0b sequences:", opmMmlCode);
+      // Convert the MML code to ensure forbidden sequences are removed.
+      const opmMmlText = convertToOPM(mmlCode);
+      if (/\$0b/.test(opmMmlText)) {
+        console.warn("Converted MML still contains $0b sequences:", opmMmlText);
       }
-      // Encode converted text into an ArrayBuffer
+      // Encode the converted text into an ArrayBuffer.
       const encoder = new TextEncoder();
-      const opmMmlBuffer = encoder.encode(opmMmlCode).buffer;
+      let opmMmlBuffer = encoder.encode(opmMmlText).buffer;
+      // Further remove any forbidden "$0b00" byte sequences from the buffer.
+      opmMmlBuffer = removeForbiddenSequence(opmMmlBuffer);
       
-      // Call compileAndPlay with the ArrayBuffer instead of a string.
+      // Call compileAndPlay with the processed ArrayBuffer.
       ZMUSIC.compileAndPlay(opmMmlBuffer)
         .then(() => {
           console.info("Playback started successfully.");
@@ -55,9 +84,9 @@ createApp({
       // Create Ace editor in the div with id "editor".
       editor.value = ace.edit("editor");
       editor.value.setTheme("ace/theme/monokai");
-      // Set editing mode (for plain text, you might use "ace/mode/text")
+      // Set editing mode (for plain text, "ace/mode/text" is appropriate).
       editor.value.session.setMode("ace/mode/text");
-      // Set default MML code in the editor.
+      // Set default MML in the editor.
       editor.value.setValue(defaultMml, -1);
 
       // Initialize ZMUSIC.
