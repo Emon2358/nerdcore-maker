@@ -68,30 +68,20 @@
               console.log("ZMUSIC.resume() により AudioContext を再開しました。");
             }
             
-            // ※ AudioWorkletNode に対応している場合、利用を有効にする（ZMUSIC 側の実装が必要）
+            // AudioWorkletNode 利用の設定（ZMUSIC 側で対応している場合）
             if (window.AudioWorkletNode && ZMUSIC.setUseAudioWorklet) {
               ZMUSIC.setUseAudioWorklet(true);
               console.log("AudioWorkletNode を使用するように設定しました。");
             }
             
-            // ZMUSIC のインストール
+            // ZMUSIC のインストールと MML のコンパイル＆再生
             console.log("ZMUSIC をインストール中…");
-            await ZMUSIC.install();
-            console.log("ZMUSIC のインストールが完了しました。");
+            await ZMUSIC.install().then(() => {
+              console.log("ZMUSIC のインストールが完了しました。");
+              console.log("音楽再生を開始します。");
+              ZMUSIC.compileAndPlay(text);
+            });
             
-            // （もし実装されていれば）音量の設定
-            if (ZMUSIC.setVolume) {
-              // ※ 音量の範囲がライブラリ依存の場合、必要に応じて調整してください
-              ZMUSIC.setVolume(1.0);
-              console.log("Volume set to 1.0");
-            }
-            
-            console.log("音楽再生を開始します。");
-            
-            // テキストを ArrayBuffer に変換して再生（必要に応じて、直接文字列を渡すことも検討）
-            const encoder = new TextEncoder();
-            const buffer = encoder.encode(text).buffer;
-            ZMUSIC.play(buffer);
           } catch (error) {
             this.logError('Error during playing music: ' + error);
           }
