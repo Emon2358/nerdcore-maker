@@ -1,28 +1,51 @@
+<!DOCTYPE html>
 <html>
   <head>
-    <!-- <script src="zmusic.asm.js"></script> -->
+    <meta charset="UTF-8">
+    <title>ZMUSIC Example</title>
+    <!-- Include the ZMUSIC library -->
     <script src="dist/zmusic.js"></script>
     <script>
-      // Make XHR to support Promise.
-      function xhr (url) {
-         return new Promise(function (resolve, reject) {
-             var xhr = new XMLHttpRequest();
-             xhr.open('GET', url, true);
-             xhr.responseType = 'arraybuffer';
-             xhr.addEventListener('load', e => {
-                 resolve(xhr.response);
-                 xhr.abort();
-             }, false);
-             xhr.send();
-         });
+      // XHR utility function to load data
+      function xhr(url) {
+        return new Promise(function(resolve, reject) {
+          var xhr = new XMLHttpRequest();
+          xhr.open('GET', url, true);
+          xhr.responseType = 'arraybuffer';
+          xhr.addEventListener('load', function() {
+            if (xhr.status === 200) {
+              resolve(xhr.response);
+            } else {
+              reject(new Error(`Failed to load ${url}: ${xhr.statusText}`));
+            }
+            xhr.abort();
+          });
+          xhr.send();
+        });
       }
 
-      Promise.all([
-         ZMUSIC.install(),
-         xhr('./test.zms')
-      ]).then(results => {
-         ZMUSIC.play(results[1]);
+      // When the document loads, install the ZMUSIC framework and load test data.
+      document.addEventListener('DOMContentLoaded', function() {
+        document.body.addEventListener('click', function() {
+          // Resume AudioContext on user interaction
+          if (ZMUSIC.audioContext && ZMUSIC.audioContext.state === 'suspended') {
+            ZMUSIC.audioContext.resume();
+          }
+        });
+
+        Promise.all([
+          ZMUSIC.install(),
+          xhr('./test.zms')
+        ]).then(results => {
+          ZMUSIC.play(results[1]);
+        }).catch(error => {
+          console.error("Error in Promise.all:", error);
+        });
       });
     </script>
   </head>
+  <body>
+    <h1>ZMUSIC Audio Test</h1>
+    <p>Click anywhere on the page to resume audio context if needed.</p>
+  </body>
 </html>
