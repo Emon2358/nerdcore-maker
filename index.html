@@ -75,14 +75,33 @@
     // ボタンのクリックでオーディオ再生処理を開始する
     document.getElementById('playButton').addEventListener('click', async function() {
       try {
-        // ユーザー操作後に AudioContext を再開または生成する（ライブラリにより異なります）
+        console.log("Playボタンがクリックされました。");
+
+        // ZMUSIC ライブラリの AudioContext を再開する（または独自に作成して再開）
         if (window.ZMUSIC && typeof ZMUSIC.resume === 'function') {
-          ZMUSIC.resume();
+          await ZMUSIC.resume();
+          console.log("ZMUSIC.resume() により AudioContext を再開しました。");
+        } else if (window.AudioContext) {
+          // 万が一 ZMUSIC 内で管理されていなければ、自前で AudioContext の再開処理
+          const ac = new AudioContext();
+          if (ac.state === 'suspended') {
+            await ac.resume();
+            console.log("新規 AudioContext を生成し、再開しました。");
+          }
         }
 
-        // ※ 404エラーが発生している場合、ここで指定している 'data/bgm1.zmd' のパスを再確認してください
+        // ZMDファイルの取得
+        console.log("ZMDファイルを読み込み中…");
         const zmdData = await fetchBinary('data/bgm1.zmd');
+        console.log("ZMDファイルの読み込みに成功しました。");
+
+        // ZMUSIC のインストール
+        console.log("ZMUSIC をインストール中…");
         await ZMUSIC.install();
+        console.log("ZMUSIC のインストールが完了しました。");
+
+        // 再生開始
+        console.log("音楽再生を開始します。");
         ZMUSIC.play(zmdData);
       } catch (error) {
         console.error('Error during loading or playing music:', error);
